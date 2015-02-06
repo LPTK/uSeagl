@@ -1,0 +1,7 @@
+package typing
+
+trait Types {
+
+}
+
+
