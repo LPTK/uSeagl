@@ -26,7 +26,7 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   def apply(x: a.Expr) = x match {
     case a.Var(vs) => Var(vars(vs))
 //    case a.FCall(fs,ta,ra,a) => b.FCall(fun(fs), )
-    case a.FCall(fs,ta,ra,a) => FCall(funs(fs), None, None, None)
+    case a.FCall(fs,ta,ra,a) => FCall(funs(fs), None, None, Seq())
   }
   
   def apply(x: a.Fun): Fun = Fun(x.nam, Seq(), Seq(), Seq(), x.ret map apply, Spec.empty, terms(x.body)) 
@@ -47,14 +47,26 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   val funs = HashMap[a.Fun, Cyclic[Fun]]()
 //  val funs = HashMap[a.Fun, Result[Fun]]()
 //  val funs = HashMap[a.Fun, Cyclic[Result[Fun]]]()
+  val typs = HashMap[a.Typ, Cyclic[Typ]]()
   
-  def apply(x: Cyclic[a.Fun]): Cyclic[Fun] = {
-    val k = x.value
-    println(s"cf ${funs isDefinedAt k}  ${k}")
+//  def apply(x: Cyclic[a.Fun]): Cyclic[Fun] = mkCycle(x.value)
+//  def apply(x: Cyclic[a.Typ]): Cyclic[Typ] = mkCycle(x.value)
+  
+  def mkCycle(k: a.Fun): Cyclic[Fun] = {
+//    println(s"cf ${funs isDefinedAt k}  ${k}")
     if (funs isDefinedAt k) funs(k)
     else new Cyclic[Fun]({
       cf =>
         funs += ((k -> cf))
+        apply(k)
+    })
+  }
+  def mkCycle(k: a.Typ): Cyclic[Typ] = {
+//    println(s"cf ${typs isDefinedAt k}  ${k}")
+    if (typs isDefinedAt k) typs(k)
+    else new Cyclic[Typ]({
+      cf =>
+        typs += ((k -> cf))
         apply(k)
     })
   }
@@ -124,8 +136,10 @@ class Read extends StageConverter(Ast, Resolving) {
 class Resolve extends StageConverter(Resolving, Resolved) {
   import b._
   
-  def typs(x: a.TypSym) = apply(x.get) //apply(x.get) //x.get flatMap apply
-  def funs(x: a.FunSym) = Lazy(apply(x.get))
+  def typs(x: a.TypSym) = mkCycle(x.get) //apply(x.get) //x.get flatMap apply
+  def funs(x: a.FunSym) = mkCycle(x.get)
+//    Lazy(apply(x.get))
+//    apply(new Cyclic[a.Fun](_ => x.get))
   def vars(x: a.VarSym) = apply(x.get) //x.get flatMap apply
   def terms(x: a.Term)  = apply(x)
   

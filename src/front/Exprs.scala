@@ -15,8 +15,8 @@ self: Stage =>
   
 //  case class Var(nam: VId) extends BasicExpr
   case class Var(sym: VarSym) extends BasicExpr
-  case class FCall(fid: FunSym, targs: Opt[Seq[Type]], rargs: Opt[Seq[Reg]], args: Opt[Seq[Expr]]) extends BasicExpr {
-    override def toString = s"CALL ${fname(fid)} ${args mkString ","}"
+  case class FCall(f: FunSym, targs: Opt[Seq[Type]], rargs: Opt[Seq[Reg]], args: Seq[Expr]) extends BasicExpr {
+    override def toString = s"CALL ${fname(f)} ${args mkString ","}"
   }
   case class Build(typ: Type, args: Seq[Expr]) extends BasicExpr
   

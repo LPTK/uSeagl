@@ -15,7 +15,7 @@ object Cyclic {
   
 //  implicit def plain2cyclic[T](t: T) = new Cyclic[T](_ => t)
   
-//  implicit def cyclic2plain[T](c: Cyclic[T]) = c.value
+  implicit def cyclic2plain[T](c: Cyclic[T]) = c.value
   
 }
 

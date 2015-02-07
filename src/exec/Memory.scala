@@ -18,15 +18,18 @@ object Memory {
   case class RefPtr(a: Addr) extends Ptr
   case object Nil extends Ptr
   
-  case class Obj(fields: HashMap[VId, Addr])
+  case class Obj(fields: Map[VId, Ptr])
   
   class Heap {
     private var nextAddr = Nat(0): Addr
     val objs = Map[Addr,Obj]()
     
+    private def freshAddr = nextAddr oh_and (nextAddr += 1)
+    
     def alloc(obj: Obj) = {
-      objs += (nextAddr -> obj)
-      nextAddr += 1
+      val addr = freshAddr
+      objs += (addr -> obj)
+      OwnPtr(addr)
     }
     
     def dealloc(ptr: Ptr): Unit = ptr match {

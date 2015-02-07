@@ -95,7 +95,7 @@ object Parser extends StandardTokenParsers with regex.RegParser {
     case stmts => Block(stmts)
   }
   
-  def expr: Parser[Expr] = block | (ident ~ expr ^^ { case id~e => FCall(FId(id),None,None,Some(Seq(e)))}) | (varname ^^ (Var))
+  def expr: Parser[Expr] = block | (ident ~ expr ^^ { case id~e => FCall(FId(id),None,None,Seq(e))}) | (varname ^^ (Var))
   
   def varname: Parser[VId] = ident ^^ (VId.apply)
   

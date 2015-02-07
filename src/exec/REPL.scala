@@ -27,7 +27,7 @@ object REPL extends App {
         val res = new Resolve
 //        println(res(f))
         val r = res(f)
-//        println(r)
+        println(r)
         r
         
       case Success(typ: Typ, _) =>
@@ -43,7 +43,7 @@ object REPL extends App {
       case _ =>
         
     }} catch {
-//      case CompileError(msg) => println(s"Compile error: $msg")
+      case CompileError(msg) => println(s"Compile error: $msg")
       case _ if false => ???
     }
     

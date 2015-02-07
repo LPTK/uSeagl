@@ -44,16 +44,16 @@ object Stages {
   
   object Resolved extends Stage {
     
-    type TypSym = Typ
+    type TypSym = Cyclic[Typ]
 //    type FunSym = Fun
-//    type FunSym = Cyclic[Fun]  // Fun
-    type FunSym = Lazy[Fun]  // Fun
+    type FunSym = Cyclic[Fun]  // Fun
+//    type FunSym = Lazy[Fun]  // Fun
     type VarSym = Local
     
     type Term = Expr
     
 //    def fname(s: FunSym) = s.nam.toString
-    def fname(s: FunSym) = s.get.nam.toString
+    def fname(s: FunSym) = s.value.nam.toString
   }
   
   
