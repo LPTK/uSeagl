@@ -24,7 +24,10 @@ object REPL extends App {
         val cf = new Cyclic[Resolving.Fun](_ => f)
         
         val res = new Resolve
-        println(res(f))
+//        println(res(f))
+        val r = res(f)
+        println(r)
+        r.get
         
       case Success(typ: Typ, _) =>
 //        try {

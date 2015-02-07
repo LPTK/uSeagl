@@ -34,7 +34,7 @@ self: Stage =>
   
   trait Decl
   
-  case class Typ(nam: TId, typs: Seq[TId], regs: Seq[VId], params: Seq[Local]) extends Decl
+  case class Typ(nam: TId, typs: Seq[TId], regs: Seq[VId], params: Seq[Local]) extends Decl with Unique
   
   case class Type(t: TypSym, targs: Opt[Seq[Type]], rargs: Opt[Seq[Reg]])
   
@@ -46,7 +46,7 @@ self: Stage =>
       ret: Opt[Type],
       spec: Spec,
       body: Term  // Cyclic[Term]
-  ) extends Decl
+  ) extends Decl with Unique
   
   case class Pgrm(typs: Map[Id,Typ], funs: Map[Id,Fun])
   
