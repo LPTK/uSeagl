@@ -73,6 +73,7 @@ case class SingleStaged(s: Stage) {
 //class Read extends StageConverter[Ast.type, Resolving.type](Ast, Resolving) with DirectConverter {
 class Read extends StageConverter(Ast, Resolving) {
   import scala.util.Success
+  import Reporting.IdentifierNotFound
   import collection.mutable._
   import Resolving._
   import b._
@@ -86,18 +87,26 @@ class Read extends StageConverter(Ast, Resolving) {
       locTable: Map[VId, Local],
       parent: Option[Ctx] )
   {
-    def apply(x: TId) = typTable(x)
+//    def check(id: Id, m: Map[Id, _]) = ???
+    def get[K<:Id,V](id: K, m: Map[K, V]) =
+      if (m isDefinedAt id) m(id)
+      else throw IdentifierNotFound(id)
+    
+    def apply(x: TId) = get(x, typTable)//typTable(x)
     def update(x: TId, y: Typ) = typTable(x) = y
     
-    def apply(x: FId) = funTable(x)
+    def apply(x: FId) = get(x, funTable)
     def update(x: FId, y: Fun) = funTable(x) = y
     
-    def apply(x: VId) = locTable(x)
+    def apply(x: VId) = get(x, locTable)
     def update(x: VId, y: Local) = locTable(x) = y
   }
   private var ctx = Ctx(Map(), Map(), Map(), None)
   
-  def ult[T](e: => T) = Lazy(e) //unit(Lazy(Try(e)))
+//  def ult[T](e: => T) = Lazy(Try(e).transform(x=>Try(x), {
+//    case e: java.util.NoSuchElementException => Failure(IdentifierNotFound(null))
+//  })) // Lazy(e) //unit(Lazy(Try(e)))
+  def ult[T](e: => T) = Lazy(e)
   
   def typs(x: a.TypSym) = ult(ctx(x))
   def funs(x: a.FunSym) = ult(ctx(x))
@@ -115,8 +124,8 @@ class Read extends StageConverter(Ast, Resolving) {
 class Resolve extends StageConverter(Resolving, Resolved) {
   import b._
   
-  def typs(x: a.TypSym) = apply(x.get) //x.get flatMap apply
-  def funs(x: a.FunSym) = ???
+  def typs(x: a.TypSym) = apply(x.get) //apply(x.get) //x.get flatMap apply
+  def funs(x: a.FunSym) = Lazy(apply(x.get))
   def vars(x: a.VarSym) = apply(x.get) //x.get flatMap apply
   def terms(x: a.Term)  = apply(x)
   

@@ -7,6 +7,7 @@ object REPL extends App {
   import Ast._
   import front._
   import Parser._
+  import Reporting.CompileError
   
   def rep {
     
@@ -14,7 +15,7 @@ object REPL extends App {
     
     val t = phrase(toplevel)(new lexical.Scanner(readLine))
     println(t)
-    t match {
+    try { t match {
       case Success(fun: Fun, _) =>
         
         val read = new Read
@@ -26,7 +27,7 @@ object REPL extends App {
         val res = new Resolve
 //        println(res(f))
         val r = res(f)
-        println(r)
+//        println(r)
         r
         
       case Success(typ: Typ, _) =>
@@ -38,7 +39,12 @@ object REPL extends App {
 ////        println("exec: ")
 //        for (t <- path(trees, reduce))
 //          println(t)
+        
       case _ =>
+        
+    }} catch {
+//      case CompileError(msg) => println(s"Compile error: $msg")
+      case _ if false => ???
     }
     
     println

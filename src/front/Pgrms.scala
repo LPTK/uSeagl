@@ -5,15 +5,19 @@ import common._
 import Specs._
 import Regions._
 
-trait Id {
+abstract class Id(name: Str) {
   def sym: Symbol
+  def fullStr = s"$name "+toString
   override def toString = sym match { case Symbol(str) => str }
 }
-case class TId(sym: Sym) extends Id
+object Id {
+  implicit def toStr(id: Id) = id.toString
+}
+case class TId(sym: Sym) extends Id("Type")
 object TId { def apply(str: Str) = new TId(Sym(str)) }
-case class FId(sym: Sym) extends Id
+case class FId(sym: Sym) extends Id("Function")
 object FId { def apply(str: Str) = new FId(Sym(str)) }
-case class VId(sym: Sym) extends Id
+case class VId(sym: Sym) extends Id("Local")
 object VId { def apply(str: Str) = new VId(Sym(str)) }
 
 trait Pgrms {
