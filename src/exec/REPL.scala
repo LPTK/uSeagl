@@ -18,7 +18,7 @@ object REPL extends App {
       case Success(fun: Fun, _) =>
         
         val read = new Read
-        val f = read(fun).get //: Resolving.Fun
+        val f = read(fun) //: Resolving.Fun
         println(f)
         
         val cf = new Cyclic[Resolving.Fun](_ => f)
@@ -27,7 +27,7 @@ object REPL extends App {
 //        println(res(f))
         val r = res(f)
         println(r)
-        r.get
+        r
         
       case Success(typ: Typ, _) =>
 //        try {
