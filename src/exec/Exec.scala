@@ -1,12 +1,24 @@
 package exec
 
-object Exec {
-  import collection.mutable._
-  import Exceptions._
-  import util._
-  import front._
+import collection.mutable._
+import Exceptions._
+import util._
+import front._
+  
+//object Exec {
+//  import collection.mutable._
+//  import Exceptions._
+//  import util._
+//  import front._
+//  
+//}
+
+trait Exec {
   
   
   
 }
+
+
+
 

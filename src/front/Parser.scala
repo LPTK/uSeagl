@@ -22,12 +22,12 @@ object Parser extends StandardTokenParsers with regex.RegParser {
     )
   }
   
-  def paramList: Parser[Seq[Param]] = "(" ~> repsep(param, ",") <~ ")"
+  def paramList: Parser[Seq[Local]] = "(" ~> repsep(param, ",") <~ ")"
   def typList: Parser[Seq[TId]] = "[" ~> repsep(ident, ",") <~ "]" ^^ (_ map TId.apply)
   def regList: Parser[Seq[VId]] = "{" ~> repsep(ident, ",") <~ "}" ^^ (_ map VId.apply)
   
-  def param: Parser[Param] = ident ~ (":" ~> typez) ^^ {
-    case nam~t => Param(VId(nam),t)
+  def param: Parser[Local] = ident ~ (":" ~> typez) ^^ {
+    case nam~t => Local(VId(nam),t)
   }
   
   def targs = ("[" ~> repsep(typez, ",") <~ "]")
@@ -46,13 +46,14 @@ object Parser extends StandardTokenParsers with regex.RegParser {
 //    )
 //  }
   
-  def fun: Parser[Fun] = "fun" ~> ident ~ (typList?) ~ (regList?) ~ (paramList?) ~ (":" ~> typez) ~ (spec?) ^^ {
-    case nam ~ typs ~ regs ~ params ~ ret ~ spec => Fun(FId(nam),
+  def fun: Parser[Fun] = "fun" ~> ident ~ (typList?) ~ (regList?) ~ (paramList?) ~ ((":" ~> typez)?) ~ (spec?) ~ ("=" ~> expr) ^^ {
+    case nam ~ typs ~ regs ~ params ~ ret ~ spec ~ expr => Fun(FId(nam),
         typs getOrElse (Seq()),
         regs getOrElse (Seq()),
         params getOrElse (Seq()),
         ret,
-        spec getOrElse (Spec.empty)
+        spec getOrElse (Spec.empty),
+        expr // Cyclic(expr)
     )
   }
   
@@ -84,12 +85,39 @@ object Parser extends StandardTokenParsers with regex.RegParser {
     )
   }
   
-  def expr = ident
+  def stmt: Parser[Stmt] = bind | expr
+  
+  def bind: Parser[Binding] = {(varname ~ ("=" ~> expr)) ^^ {
+    case id ~ e => Binding(id, e)
+  }}
+  
+  def block: Parser[Block] = ("{" ~> repsep(stmt,";") <~ "}") ^^ {
+    case stmts => Block(stmts)
+  }
+  
+  def expr: Parser[Expr] = block | (ident ~ expr ^^ { case id~e => FCall(FId(id),None,None,Some(Seq(e)))}) | (varname ^^ (Var))
+  
+  def varname: Parser[VId] = ident ^^ (VId.apply)
   
   
-  def toplevel = decl | expr
+  
+  
+  
+  
+  def toplevel = decl | stmt
   
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 

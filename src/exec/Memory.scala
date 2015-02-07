@@ -5,11 +5,11 @@ object Memory {
   import util._
   import common._
   import Stages.Resolved._
-  import Exec._
+//  import Exec._
   import Exceptions._
   import front._
   
-  type Addr = Int
+  type Addr = Nat
   
 //  type Heap = Map[Addr,Obj]
   
@@ -21,7 +21,7 @@ object Memory {
   case class Obj(fields: HashMap[VId, Addr])
   
   class Heap {
-    private var nextAddr = 0: Addr
+    private var nextAddr = Nat(0): Addr
     val objs = Map[Addr,Obj]()
     
     def alloc(obj: Obj) = {
