@@ -12,7 +12,9 @@ object Regions {
   }
   
   /** Exact region */
-  case class XReg(exp: Regex) extends Reg
+  case class XReg(exp: Regex) extends Reg {
+    override def toString = exp.toString
+  }
   
   /** Full region */
   case class FReg(fexp: Full) extends Reg {

@@ -1,5 +1,7 @@
 package exec
 
+import common.Reporting
+
 object REPL extends App {
   
   import util._
@@ -10,10 +12,12 @@ object REPL extends App {
   import Parser._
   import Reporting.CompileError
   import Memory._
+  import typing._
 //  import Memory._
   
   val ps = new Presolve
-  val rs = new Resolve
+  val rs = new Resolve(ps)
+  val ty = new Typing(rs)
   val ex = new Exec
   
   val ctx = collection.mutable.HashMap[VId,Value]()
@@ -48,12 +52,16 @@ object REPL extends App {
         
         val r = rs(f)
         println(r)
-      
+        
+        val t = ty(r)
+        println(t)
+        
       case Success(typ: Typ, _) =>
-        println(rs(ps(typ)))
+        println(ty(rs(ps(typ))))
       
       case Success(e: Expr, _) =>
         val re = rs(ps(e))
+        println("Typed: " + ty.terms(re))
         val r = ex(re, ctx toMap)
         println(ex.h.dispVal(r))
         ex.h.dealloc(r)
@@ -76,7 +84,9 @@ object REPL extends App {
       case _ => wtf
         
     }} catch {
-      case CompileError(msg) => System.err.println(s"Compile error: $msg")
+      case CompileError(msg) =>
+//        System.err.
+        println(s"Compile error: $msg")
       case Exceptions.ExecException(msg) => System.err.println(s"Runtime error: $msg")
 //      case _ if false => ???
     }

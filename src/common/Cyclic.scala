@@ -2,16 +2,24 @@ package common
 
 case class CyclicDependency() extends Exception("Illegal cyclic access")
 
-class Cyclic[T](expr: Cyclic[T] => T) extends Unique {
+//class Cyclic[+T](expr: Cyclic[T] => T, toStr: T => String = ((_:T) => "[Cyclic value]")) extends Unique {
+class Cyclic[+T](expr: Cyclic[T] => T, toStr: T => String = ((t:T) => t.toString)) extends Unique {
   private val _value = expr(this)
   def value =
     if (_value == null) throw CyclicDependency()
     else _value
   
 //  def map(f: T => T) = 
+  
+  override def toString =
+    if (_value == null) "[Cyclic in resolution]"
+    else toStr(value)
 }
 
 object Cyclic {
+  
+  def apply[T](x: T) = new Cyclic[T](_ => x)
+  def unapply[T](x: Cyclic[T]) = Some(x.value)
   
 //  implicit def plain2cyclic[T](t: T) = new Cyclic[T](_ => t)
   

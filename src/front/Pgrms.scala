@@ -45,31 +45,57 @@ self: Stage =>
     val nam: TId
     val typs: Seq[TId]
     val regs: Seq[VId]
+    
+    override def toString = this match {
+      case ConcTyp(nam, typs, regs, params) =>
+//        s"$nam[${typs mkString ", "}]{${regs mkString ", "}}(${params mkString ", "})"
+        "typ " + nam + mkStr(typs,"[",", ","]",false) + mkStr(regs,"{",", ","}",false) + mkStr(params,"(",", ",")",false)
+      case AbsTyp(nam, typs, regs) =>
+//        s"$nam[${typs mkString ", "}]{${regs mkString ", "}}=?"
+        "" + nam + mkStr(typs,"[",", ","]",false) + mkStr(regs,"{",", ","}",false) + "=?"
+    }
   }
   
-  case class ConcTyp(nam: TId, typs: Seq[TId], regs: Seq[VId], params: Seq[Local]) extends Decl with Typ
+  case class ConcTyp(nam: TId, typs: Seq[TId], regs: Seq[VId], params: Seq[Local]) extends Decl with Typ {
+    def getField(id: VId) = params.find (_.nam === id) get
+//    def fieldType(id: VId) = (params.find (_.nam === id) get).typ // TODO handle not here
+  }
 
   case class AbsTyp(nam: TId, typs: Seq[TId], regs: Seq[VId]) extends Typ
   
   
-  case class Type(t: TypSym, targs: Opt[Seq[Type]], rargs: Opt[Seq[Reg]])
-  
+//  case class Type(t: TypSym, targs: Opt[Seq[Type]], rargs: Opt[Seq[Reg]]) { // TODOne rm Opt
+  case class Type(t: TypSym, targs: Seq[Type], rargs: Seq[Reg]) {
+    
+    override def toString = tname(t) + mkStr(targs,"[",", ","]",false) + mkStr(rargs,"{",", ","}",false)
+  }
+//  object Type {
+//    def unapply()
+//  }
   
   case class Fun (
       nam: FId,
       typs: Seq[TId],
       regs: Seq[VId],
       params: Seq[Local],
-      ret: Opt[Type],
+      ret: TypeSpec,
       spec: Spec,
       body: Term  // Cyclic[Term]
-  ) extends Decl with Unique
+  ) extends Decl with Unique {
+    override def toString = "fun " + nam + mkStr(typs,"[",", ","]",false) +
+      mkStr(regs,"{",", ","}",false) + mkStr(params,"(",", ",")",true) + s": $ret = $body"
+  }
   
   
-  /** will incorporate more complex info, eg: cross-scoping info */
-  case class Local(nam: VId, typ: Opt[Type])
+  /** will incorporate more complex info, eg: cross-scoping info (?) */
+  case class Local(nam: VId, typ: TypeSpec) extends Unique {
+    override def toString = s"$nam: $typ"
+  }
   
   
+  def mkStr(xs: Traversable[_], start: Str, sep: Str, end: Str, showEmpty: Bool = true) =
+    if (!showEmpty && xs.isEmpty) ""
+    else xs.mkString(start, sep, end)
   
 }
 

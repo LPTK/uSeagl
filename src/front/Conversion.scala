@@ -5,8 +5,8 @@ import common._
 import Stages._
 import Specs._
 import Proxy._
-//import scala.util.parsing.input.Positional
 import scala.util.{Try, Success, Failure}
+import common.Reporting
 
 
 abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
@@ -18,30 +18,33 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   def typs(x: a.TypSym): b.TypSym
   def funs(x: a.FunSym): b.FunSym
   def vars(x: a.VarSym): b.VarSym
-  def terms(x: a.Term): b.Term
+  def terms(x: a.Term):  b.Term
+  
+  def tspec(x: a.TypeSpec):  b.TypeSpec
   
   
   /** Trees */
   
   def apply(x: a.Expr): Expr = x match {
-    case a.Var(vs) => Var(vars(vs))
-//    case a.FCall(fs,ta,ra,a) => b.FCall(fun(fs), )
-    case a.FCall(fs,ta,ra,a) => FCall(funs(fs), None, None, a map terms)
-    case a.Build(t,a) => Build(apply(t), a map terms)
+    case a.NilExpr => NilExpr
     case a.IntLit(n) => IntLit(n)
+    case a.Var(vs) => Var(vars(vs))
     case a.Block(s,e) => Block(s map apply, terms(e))
     case a.Ite(c,t,e) => Ite(terms(c),terms(t),terms(e))
-    case a.NilExpr => NilExpr
+    case a.Build(t,a) => Build(apply(t), a map terms)
+    case a.FCall(fs,ta,ra,a) => FCall(funs(fs), None, None, a map terms)
     case a.FieldAccess(e, id) => FieldAccess(terms(e), id)
     case a.FieldAssign(e, id, v) => FieldAssign(terms(e), id, terms(v))
   }
   
   def apply(x: a.Fun): Fun =
-    Fun(x.nam, x.typs, x.regs, x.params map apply, x.ret map apply, Spec.empty, terms(x.body)) 
+    Fun(x.nam, x.typs, x.regs, x.params map apply, tspec(x.ret), Spec.empty, terms(x.body)) 
   
-  def apply(x: a.Type): Type = Type(typs(x.t), None, None)
+  def apply(x: a.Type): Type = Type(typs(x.t), x.targs map apply, x.rargs)
   
   def apply(x: a.Typ): Typ = x match {
+//    case x: a.ConcTyp => ConcTyp(x.nam, x.typs, x.regs, x.params map apply)
+//    case x: a.AbsTyp => AbsTyp(x.nam, x.typs, x.regs)
     case t: a.ConcTyp => apply(t)
     case t: a.AbsTyp => apply(t)
     case _ => wtf
@@ -56,9 +59,13 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
     case x: a.Binding => apply(x)
   }
   
-  def apply(x: a.Local): Local = Local(x.nam, x.typ map apply)
+//  def apply(x: a.Local): Local = Local(x.nam, tspec(x.typ))
+  def apply(x: a.Local): Local =
+    if (vars isDefinedAt x) vars(x)
+    else Local(x.nam, tspec(x.typ)) and (vars(x) = _)
   
   def apply(x: a.Binding): Binding = Binding(x.nam, terms(x.value))
+  
   
   /** Cycle handling */
   
@@ -68,6 +75,7 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
 //  val funs = HashMap[a.Fun, Result[Fun]]()
 //  val funs = HashMap[a.Fun, Cyclic[Result[Fun]]]()
   val typs = HashMap[a.Typ, Cyclic[Typ]]()
+  val vars = HashMap[a.Local, Local]()
   
 //  def apply(x: Cyclic[a.Fun]): Cyclic[Fun] = mkCycle(x.value)
 //  def apply(x: Cyclic[a.Typ]): Cyclic[Typ] = mkCycle(x.value)
@@ -90,6 +98,14 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
         apply(k)
     })
   }
+//  def mkVar(k: a.Local): Local =
+//    if (vars isDefinedAt k) vars(k)
+//    else apply(k)
+  
+  
+  /** Builtins */
+  
+  val btyps: Seq[Typ]
 }
 
 case class SingleStaged(s: Stage) {
@@ -98,6 +114,8 @@ case class SingleStaged(s: Stage) {
     def typs(x: a.TypSym) = x
     def funs(x: a.FunSym) = x
     def vars(x: a.VarSym) = x
+    
+    def tspec(x: a.TypeSpec) = x
     
   }
 }
@@ -165,7 +183,9 @@ class Presolve extends StageConverter(Ast, Resolving) {
   val builtins = Builtins(Ast)  // Builtins[Ast.type](Ast)
 //  builtins.btyps foreach (t => ctx(t.nam) = apply(t))
   builtins.btyps foreach apply
-    
+  
+  val btyps = builtins.btyps map apply
+  
 //  def ult[T](e: => T) = Lazy(Try(e).transform(x=>Try(x), {
 //    case e: java.util.NoSuchElementException => Failure(IdentifierNotFound(null))
 //  })) // Lazy(e) //unit(Lazy(Try(e)))
@@ -178,6 +198,9 @@ class Presolve extends StageConverter(Ast, Resolving) {
 //    Lazy{println(ctx);ctx(x)}
     {val c = ctx; Lazy(c(x))}
   def terms(x: a.Term)  = apply(x)
+  
+  def tspec(x: a.TypeSpec) = x map apply
+  
   
   override def apply(x: a.Fun) = { // TODO use and
     pushCtx
@@ -211,15 +234,19 @@ class Presolve extends StageConverter(Ast, Resolving) {
 }
 
 //class Resolve extends StageConverter[Resolving.type, Resolved.type](Resolving, Resolved) with FallibleConverter {
-class Resolve extends StageConverter(Resolving, Resolved) {
+class Resolve(ps: Presolve) extends StageConverter(Resolving, Resolved) {
   import b._
+  
+  val btyps = ps.btyps map apply
   
   def typs(x: a.TypSym) = mkCycle(x.get) //apply(x.get) //x.get flatMap apply
   def funs(x: a.FunSym) = mkCycle(x.get)
 //    Lazy(apply(x.get))
 //    apply(new Cyclic[a.Fun](_ => x.get))
-  def vars(x: a.VarSym) = apply(x.get) //x.get flatMap apply
+  def vars(x: a.VarSym) = apply(x.get) //apply(x.get) //x.get flatMap apply
   def terms(x: a.Term)  = apply(x)
+  
+  def tspec(x: a.TypeSpec) = x map apply
   
   
   

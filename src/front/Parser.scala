@@ -26,8 +26,8 @@ object Parser extends StandardTokenParsers with regex.RegParser {
   def typList: Parser[Seq[TId]] = "[" ~> repsep(ident, ",") <~ "]" ^^ (_ map TId.apply)
   def regList: Parser[Seq[VId]] = "{" ~> repsep(ident, ",") <~ "}" ^^ (_ map VId.apply)
   
-  def param: Parser[Local] = ident ~ (":" ~> typez) ^^ {
-    case nam ~ t => Local(VId(nam), Some(t))
+  def param: Parser[Local] = ident ~ ((":" ~> typez)?) ^^ {
+    case nam ~ t => Local(VId(nam), t)
   }
   
   def targs = ("[" ~> repsep(typez, ",") <~ "]")
@@ -35,8 +35,8 @@ object Parser extends StandardTokenParsers with regex.RegParser {
   
   def typez: Parser[Type] = ident ~ (targs?) ~ (rargs?) ^^ {
     case nam ~ targs ~ rargs => Type(TId(nam),
-        targs, //getOrElse (Seq()),
-        rargs //getOrElse (Seq())
+        targs getOrElse (Seq()),
+        rargs getOrElse (Seq())
     )
   }
 //  def ftyp: Parser[Type] = ident ~ (typList?) ~ (paramList?) ^^ {
@@ -98,7 +98,7 @@ object Parser extends StandardTokenParsers with regex.RegParser {
     case stmts ~ ret => Block(stmts, ret)
   }
   def parblock: Parser[Expr] = ("(" ~> expr <~ ")") | (
-    "(" ~ ")" ^^ {_ => Build(Type(TId("Unit"),None,None),Seq())}
+    "(" ~ ")" ^^ {_ => Build(Type(TId("Unit"),Seq(),Seq()),Seq())}
   )
   
   def int: Parser[Expr] = numericLit ^^ {s => IntLit(s.toInt)}
