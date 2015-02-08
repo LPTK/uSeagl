@@ -23,10 +23,11 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   
   /** Trees */
   
-  def apply(x: a.Expr) = x match {
+  def apply(x: a.Expr): Expr = x match {
     case a.Var(vs) => Var(vars(vs))
 //    case a.FCall(fs,ta,ra,a) => b.FCall(fun(fs), )
     case a.FCall(fs,ta,ra,a) => FCall(funs(fs), None, None, Seq())
+    case a.Build(t,a) => Build(apply(t), a map terms)
   }
   
   def apply(x: a.Fun): Fun = Fun(x.nam, x.typs, x.regs, x.params map apply, x.ret map apply, Spec.empty, terms(x.body)) 
@@ -37,8 +38,9 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   
   def apply(x: a.Var): Var = ???
   
-  def apply(x: a.Local): Local = Local(x.nam, apply(x.typ))
+  def apply(x: a.Local): Local = Local(x.nam, x.typ map apply)
   
+  def apply(x: a.Binding): Binding = Binding(x.nam, apply(x.value))
   
   /** Cycle handling */
   
@@ -83,7 +85,7 @@ case class SingleStaged(s: Stage) {
 }
 
 //class Read extends StageConverter[Ast.type, Resolving.type](Ast, Resolving) with DirectConverter {
-class Read extends StageConverter(Ast, Resolving) {
+class Presolve extends StageConverter(Ast, Resolving) {
   import scala.util.Success
   import Reporting.IdentifierNotFound
   import collection.mutable._
@@ -99,21 +101,48 @@ class Read extends StageConverter(Ast, Resolving) {
       locTable: Map[VId, Local],
       parent: Option[Ctx] )
   {
-//    def check(id: Id, m: Map[Id, _]) = ???
-    def get[K<:Id,V](id: K, m: Map[K, V]) =
-      if (m isDefinedAt id) m(id)
-      else throw IdentifierNotFound(id)
+////    def check(id: Id, m: Map[Id, _]) = ???
+//    def get[K<:Id,V](id: K, m: Map[K, V]): V =
+//      if (m isDefinedAt id) m(id)
+//      else parent match {
+//        case Some(c) => c.get(id, m)
+//        case None => throw IdentifierNotFound(id)
+//      }
+//    
+//    def apply(x: TId) = get(x, typTable)//typTable(x)
+//    def update(x: TId, y: Typ) = typTable(x) = y
+//    
+//    def apply(x: FId) = get(x, funTable)
+//    def update(x: FId, y: Fun) = funTable(x) = y
+//    
+//    def apply(x: VId) = get(x, locTable)
+//    def update(x: VId, y: Local) = locTable(x) = y
     
-    def apply(x: TId) = get(x, typTable)//typTable(x)
+    def apply(x: TId): Typ = (typTable get x, parent) match {
+      case (Some(v), _) => v
+      case (_, Some(p)) => p(x)
+      case _ => throw IdentifierNotFound(x)
+    }
     def update(x: TId, y: Typ) = typTable(x) = y
     
-    def apply(x: FId) = get(x, funTable)
+    def apply(x: FId): Fun = (funTable get x, parent) match {
+      case (Some(v), _) => v
+      case (_, Some(p)) => p(x)
+      case _ => throw IdentifierNotFound(x)
+    }
     def update(x: FId, y: Fun) = funTable(x) = y
     
-    def apply(x: VId) = get(x, locTable)
+    def apply(x: VId): Local = (locTable get x, parent) match {
+      case (Some(v), _) => v
+      case (_, Some(p)) => p(x)
+      case _ => throw IdentifierNotFound(x)
+    }
     def update(x: VId, y: Local) = locTable(x) = y
+    
   }
   private var ctx = Ctx(Map(), Map(), Map(), None)
+  def pushCtx = ctx = Ctx(Map(), Map(), Map(), Some(ctx))
+  def popCtx = ctx = ctx.parent.get
   
   val builtins = Builtins(Ast)  // Builtins[Ast.type](Ast)
 //  builtins.btyps foreach (t => ctx(t.nam) = apply(t))
@@ -124,18 +153,31 @@ class Read extends StageConverter(Ast, Resolving) {
 //  })) // Lazy(e) //unit(Lazy(Try(e)))
   def ult[T](e: => T) = Lazy(e)
   
-  def typs(x: a.TypSym) = ult(ctx(x))
-  def funs(x: a.FunSym) = ult(ctx(x))
-  def vars(x: a.VarSym) = ult(ctx(x))
+  def typs(x: a.TypSym) = {val c = ctx; Lazy(c(x))} // ult(ctx(x))
+  def funs(x: a.FunSym) = {val c = ctx; Lazy(c(x))} // ult(ctx(x))
+  def vars(x: a.VarSym) =
+//    ult(ctx(x))
+//    Lazy{println(ctx);ctx(x)}
+    {val c = ctx; Lazy(c(x))}
   def terms(x: a.Term)  = apply(x)
   
   override def apply(x: a.Fun) = { // TODO use and
+    pushCtx
+    x.typs foreach (p => ctx(p) = ???)
+    x.params foreach (p => ctx(p.nam) = apply(p))
+//    println(ctx.locTable)
     val r = super.apply(x)
+    popCtx
     ctx(x.nam) = r
     r
   }
   override def apply(x: a.Typ) =
     super.apply(x) and (ctx(x.nam) = _)
+  
+  override def apply(x: a.Binding) =
+//    super.apply(x) and (ctx(x.nam) = (_:Binding).value)
+//    super.apply(x) and ((b:Binding) => ctx(x.nam) = Local(x.nam, b.value))
+    super.apply(x) oh_and (ctx(x.nam) = Local(x.nam, None))
   
 }
 

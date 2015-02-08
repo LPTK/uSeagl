@@ -15,21 +15,22 @@ import front._
 //  
 //}
 
-object Exec {
+class Exec {
   import Stages.Resolved._
   import collection.mutable.HashMap
 //  import collection.mutable._
   
   type Gamma = Map[VId,Ptr]
   
-  def exec(e: Expr) = {
-    val h: Heap = new Heap
+  val h: Heap = new Heap
+  
+  def apply(e: Expr, g: Gamma = Map()) = {
     
     def ref(p: Ptr) = p match {
       case OwnPtr(a) => RefPtr(a)
       case _ => p
     }
-    def mkUnit = ???
+    def mkUnit = h.alloc(Obj.empty)
     
     def rec(e: Expr)(implicit g: Gamma): Ptr = e match {
       case Var(s) => ref(g(s.nam))
@@ -87,6 +88,8 @@ object Exec {
         
     }
     
+    println(g)
+    rec(e)(g)
   }
   
   

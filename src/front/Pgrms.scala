@@ -56,7 +56,7 @@ self: Stage =>
   
   
   /** will incorporate more complex info, eg: cross-scoping info */
-  case class Local(nam: VId, typ: Type)
+  case class Local(nam: VId, typ: Opt[Type])
   
   
   

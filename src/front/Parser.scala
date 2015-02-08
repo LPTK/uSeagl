@@ -27,7 +27,7 @@ object Parser extends StandardTokenParsers with regex.RegParser {
   def regList: Parser[Seq[VId]] = "{" ~> repsep(ident, ",") <~ "}" ^^ (_ map VId.apply)
   
   def param: Parser[Local] = ident ~ (":" ~> typez) ^^ {
-    case nam~t => Local(VId(nam),t)
+    case nam ~ t => Local(VId(nam), Some(t))
   }
   
   def targs = ("[" ~> repsep(typez, ",") <~ "]")
@@ -94,7 +94,9 @@ object Parser extends StandardTokenParsers with regex.RegParser {
   def block: Parser[Block] = ("{" ~> repsep(stmt,";") <~ "}") ^^ {
     case stmts => Block(stmts)
   }
-  def parblock: Parser[Expr] = ("(" ~> expr <~ ")")
+  def parblock: Parser[Expr] = ("(" ~> expr <~ ")") | (
+    "(" ~ ")" ^^ {_ => Build(Type(TId("Unit"),None,None),Seq())}
+  )
   
   def bexpr: Parser[Expr] = block | parblock | fcall | (varname ^^ (Var))
   

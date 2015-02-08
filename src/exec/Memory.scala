@@ -29,6 +29,9 @@ object Memory {
     def apply(id: VId) = fields(id)  // TODO handle field missing
     def update(id: VId, v: Ptr) = fields(id) = v // idem
   }
+  object Obj {
+    val empty = Obj(Map())
+  }
   
   class Heap {
     private var nextAddr = Nat(0): Addr
