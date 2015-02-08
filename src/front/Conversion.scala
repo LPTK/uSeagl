@@ -21,6 +21,7 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   def terms(x: a.Term):  b.Term
   
   def tspec(x: a.TypeSpec):  b.TypeSpec
+  def tparam(x: a.TypeParam):  b.TypeParam
   
   
   /** Trees */
@@ -32,13 +33,13 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
     case a.Block(s,e) => Block(s map apply, terms(e))
     case a.Ite(c,t,e) => Ite(terms(c),terms(t),terms(e))
     case a.Build(t,a) => Build(apply(t), a map terms)
-    case a.FCall(fs,ta,ra,a) => FCall(funs(fs), None, None, a map terms)
+    case a.FCall(fs,ta,ra,a) => FCall(funs(fs), ta map apply, ra, a map terms)
     case a.FieldAccess(e, id) => FieldAccess(terms(e), id)
     case a.FieldAssign(e, id, v) => FieldAssign(terms(e), id, terms(v))
   }
   
   def apply(x: a.Fun): Fun =
-    Fun(x.nam, x.typs, x.regs, x.params map apply, tspec(x.ret), Spec.empty, terms(x.body)) 
+    Fun(x.nam, x.typs map tparam, x.regs, x.params map apply, tspec(x.ret), Spec.empty, terms(x.body)) 
   
   def apply(x: a.Type): Type = Type(typs(x.t), x.targs map apply, x.rargs)
   
@@ -49,8 +50,8 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
     case t: a.AbsTyp => apply(t)
     case _ => wtf
   }
-  def apply(x: a.ConcTyp): ConcTyp = ConcTyp(x.nam, x.typs, x.regs, x.params map apply)
-  def apply(x: a.AbsTyp): AbsTyp = AbsTyp(x.nam, x.typs, x.regs)
+  def apply(x: a.ConcTyp): ConcTyp = ConcTyp(x.nam, x.typs map tparam, x.regs, x.params map apply)
+  def apply(x: a.AbsTyp): AbsTyp = AbsTyp(x.nam, x.typs map tparam, x.regs)
   
 //  def apply(x: a.Var): Var = ???
   
@@ -180,11 +181,11 @@ class Presolve extends StageConverter(Ast, Resolving) {
   def pushCtx = ctx = Ctx(Map(), Map(), Map(), Some(ctx))
   def popCtx = ctx = ctx.parent.get
   
-  val builtins = Builtins(Ast)  // Builtins[Ast.type](Ast)
+//  val builtins = Builtins(Ast)  // Builtins[Ast.type](Ast)
 //  builtins.btyps foreach (t => ctx(t.nam) = apply(t))
-  builtins.btyps foreach apply
+  Builtins.btyps foreach apply
   
-  val btyps = builtins.btyps map apply
+  val btyps = Builtins.btyps map apply
   
 //  def ult[T](e: => T) = Lazy(Try(e).transform(x=>Try(x), {
 //    case e: java.util.NoSuchElementException => Failure(IdentifierNotFound(null))
@@ -200,25 +201,27 @@ class Presolve extends StageConverter(Ast, Resolving) {
   def terms(x: a.Term)  = apply(x)
   
   def tspec(x: a.TypeSpec) = x map apply
+  def tparam(x: a.TypeParam) = AbsTyp(x, Seq(), Seq()) and (ctx(x) = _)
   
   
   override def apply(x: a.Fun) = { // TODO use and
     pushCtx
-    x.typs foreach (p => ctx(p) = AbsTyp(p, Seq(), Seq()))
+//    x.typs foreach (p => ctx(p) = AbsTyp(p, Seq(), Seq()))
     x.params foreach (p => ctx(p.nam) = apply(p))
-//    println(ctx.locTable)
-    val r = super.apply(x)
-    popCtx
-    ctx(x.nam) = r
-    r
+////    println(ctx.locTable)
+//    val r = super.apply(x)
+//    popCtx
+//    ctx(x.nam) = r
+//    r
+    super.apply(x) and {popCtx; ctx(x.nam) = _}
   }
-//  override def apply(x: a.ConcTyp) =
-//    super.apply(x) and (ctx(x.nam) = _)
-  override def apply(x: a.ConcTyp) = {
-    pushCtx
-    x.typs foreach (p => ctx(p) = AbsTyp(p, Seq(), Seq()))
-    super.apply(x)
-  } and { popCtx; ctx(x.nam) = _ }
+  override def apply(x: a.ConcTyp) =
+    super.apply(x) and (ctx(x.nam) = _)
+//  override def apply(x: a.ConcTyp) = {
+//    pushCtx
+//    x.typs foreach (p => ctx(p) = AbsTyp(p, Seq(), Seq()))
+//    super.apply(x)
+//  } and { popCtx; ctx(x.nam) = _ }
   
   override def apply(x: a.Binding) =
 //    super.apply(x) and (ctx(x.nam) = (_:Binding).value)
@@ -247,6 +250,7 @@ class Resolve(ps: Presolve) extends StageConverter(Resolving, Resolved) {
   def terms(x: a.Term)  = apply(x)
   
   def tspec(x: a.TypeSpec) = x map apply
+  def tparam(x: a.TypeParam) = mkCycle(x).value.asInstanceOf[AbsTyp] // TODO make cleaner // apply(x)
   
   
   

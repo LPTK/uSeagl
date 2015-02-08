@@ -113,8 +113,8 @@ object Parser extends StandardTokenParsers with regex.RegParser {
     case c ~ t ~ e => Ite(c,t,e)
   }
   
-  def fcall = ident ~ ("(" ~> repsep(expr,",") <~ ")") ^^ {
-    case id ~ es => FCall(FId(id), None, None, es)
+  def fcall = ident ~ (targs?) ~ (rargs?) ~ ("(" ~> repsep(expr,",") <~ ")") ^^ {
+    case id ~ ta ~ ra ~ es => FCall(FId(id), ta getOrElse Seq(), ra getOrElse Seq(), es)
   }
   
   

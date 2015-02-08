@@ -12,12 +12,15 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
   import collection._
   import mutable.ArrayBuffer
   
-  val btyps = rs.btyps map apply
+  val btypsc = rs.btyps map mkCycle // apply
+  val btyps = btypsc map (_ value)
   
-  def btByName(nam: Sym) = Cyclic(btyps.find { _.nam == TId(nam) } get)
+//  def btByName(nam: Sym) = new Cyclic(btyps.find { _.nam == TId(nam) } get)
+  def btByName(nam: Sym) = (btypsc.find { _.nam == TId(nam) } get)
   
   val IntType = Type(btByName('Int), Seq(), Seq())
-  def RefType(typ: Type, reg: Reg) = Type(btByName('Ref), Seq(typ), Seq(reg))
+  val RefTyp = btByName('Ref)
+  def RefType(typ: Type, reg: Reg) = Type(RefTyp, Seq(typ), Seq(reg))
   
   
   def typs(x: a.TypSym) = mkCycle(x.value)
@@ -29,7 +32,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
     val t = x match {
       case a.NilExpr => ctx.mkAbsType
       case a.IntLit(n) => IntType
-      case a.Var(vs) => apply(vs).typ // TODO MAKE REF
+      case a.Var(vs) => ref(apply(vs).typ, vs.nam) // TODO MAKE REF
       case a.Block(s,e) => terms(e).typ
       case a.Ite(c,t,e) =>
 //        val ct = terms(c).typ
@@ -38,10 +41,16 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
         val tt = terms(t).typ
         ctx += (tt -> terms(e).typ)
         tt
-      case a.Build(t,a) => apply(t)
-      case a.FCall(fs,ta,ra,a) => funs(fs).ret // TODO solve pb optional typing
+//      case a.Build(t,a) => apply(t)
+      case b: a.Build =>
+        apply(b).asInstanceOf[Build].retType // apply(t)
+//      case a.FCall(fs,ta,ra,a) => funs(fs).value.retType
+      case fc: a.FCall => apply(fc).asInstanceOf[FCall].retType
       case a.FieldAccess(e, id) => // TODO handle refs
-        val typ = terms(e).typ
+        val typ = terms(e).typ.valType
+//        println(typ, id)
+//        println(terms(e).typ.t == RefTyp)
+//        terms(e).typ match { case Type(RefTyp,_,_) => }
         typ.t.value match {
           case ct @ ConcTyp(_, typs, regs, params) => RefType(typ.fieldType(id), Reg.empty)
           case at : AbsTyp => throw CompileError(s"Unknown field access _.$id on abstract type $at")
@@ -53,6 +62,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
   
 //  def tspec(x: a.TypeSpec) = wtf // will be dealt for directly
   def tspec(x: a.TypeSpec) = x map apply getOrElse ctx.mkAbsType
+  def tparam(x: a.TypeParam) = mkCycle(x).value.asInstanceOf[AbsTyp] // TODO make cleaner
   
   
   
@@ -60,16 +70,16 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
     case ct @ a.ConcTyp(nam, typs, regs, params) =>
       pushCtx
       val ps = params map apply
-      val newAbsTyps = ctx.absTyps.map (_ nam)
+      val newAbsTyps = ctx.absTyps //.map (_ nam)
       popCtx
-      ConcTyp(nam, typs ++ newAbsTyps, regs, ps)
+      ConcTyp(nam, (typs map tparam) ++ newAbsTyps, regs, ps)
 //    case at: a.AbsTyp => super.apply(x)
   }
   
   override def apply(x: a.Type) = {
     val t = typs(x.t)
 //    println(s"Typ: ${t.value}")
-    println(s"Typ: $t")
+//    println(s"Typ: $t")
     if (x.targs.size > t.typs.size) throw CompileError(s"Too many type arguments in $x")
 //    else if (x.targs.size < t.typs.size)
     val targs = (x.targs map apply) ++ (
@@ -93,7 +103,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
     }
     val absTyps = ArrayBuffer[AbsTyp]()
     def mkAbsType =
-      Type(Cyclic(AbsTyp(ctx.nextId, Seq(), Seq()) and (absTyps += _)), Seq(), Seq())
+      Type(new Cyclic(AbsTyp(ctx.nextId, Seq(), Seq()) and (absTyps += _)), Seq(), Seq())
     
     var absTypId = 0
     def nextId = {
@@ -137,26 +147,86 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
 //  }
   
   
-  implicit class TType(self: Type) {
+  
+//  implicit class TFun(self: Fun) extends Inst {
+//    import self._
+//    
+//    def targs = self.targs
+//    def rargs = self.rargs
+//    def parmzd = t.value
+//    
+//    def retType = transType(ret)
+//    
+//  }
+  implicit class TFCall(self: FCall) extends Inst {
     import self._
     
+    def targs = self.targs
+    def rargs = self.rargs
+    def parmzd = f.value
+    
+    def retType = transType(f.ret)
+    
+  }
+  implicit class TBuild(self: Build) extends Inst {
+    import self._
+    
+    def targs = self.targs
+    def rargs = self.rargs
+    def parmzd = typ.t.value
+    
+    def retType = {
+      val fromGenArgs = transType(typ)
+//      val fromArgs = new Inst {
+//        def targs = self.targs
+//        def rargs = self.rargs
+//        def parmzd = typ.t.value
+//      } transType typ
+      fromGenArgs
+    }
+    
+  }
+  
+  implicit class TType(self: Type) extends Inst {
+    import self._
+    
+    def targs = self.targs
+    def rargs = self.rargs
+    def parmzd = t.value
+    
+//    def fieldType(id: VId) = t.value match {
+//      case t: ConcTyp =>
+//        val Type(ft, targs, rargs) = t.getField(id).typ
+//        println("> ", t, self.t.typs, t.getField(id).typ)
+//        val tta = targs map {
+////          case ct: ConcTyp => ct
+//          case Type(Cyclic(at: AbsTyp), _, _) if self.t.typs contains at =>
+////            val r = self.targs.
+//            self.targs(self.t.typs.indexOf(at))
+//          case t => t
+//        }
+//        Type(ft, tta, rargs)
+//      case _ => wtf
+//    }
     def fieldType(id: VId) = t.value match {
       case t: ConcTyp =>
-        val Type(ft, targs, rargs) = t.getField(id).typ
-        println("> ", self.t.typs)
-        val tta = targs map {
-//          case ct: ConcTyp => ct
-          case Type(Cyclic(at: AbsTyp), _, _) if self.t.typs contains at =>
-//            val r = self.targs.
-            self.targs(self.t.typs.indexOf(at))
-          case t => t
-        }
-        Type(ft, tta, rargs)
+        t.getField(id) map (l => transType(l.typ)) getOrElse
+        (throw CompileError(s"Type $self does not have field $id"))
       case _ => wtf
     }
     
-    def valType = this // TODO ref
+    def valType = self match {
+      case Type(RefTyp, Seq(typ), Seq(reg)) =>
+        typ
+      case _ => self
+    }
     
+  }
+  
+  def ref(typ: Type, nam: VId) = typ match {
+    case Type(Cyclic(RefTyp), _, _) =>
+      typ
+    case _ => RefType(typ, Reg(nam))
   }
   
   

@@ -26,8 +26,12 @@ object Stages {
 //    type Term = Expr
 //    type TypeAnnot = Opt[Type]
     
+    type TypeParam = TId
+    
     def fname(s: FunSym) = s.toString
     def tname(s: TypSym) = s.toString
+    def vname(s: VarSym) = s.toString
+    def tpname(s: TypeParam) = s.toString
   }
   
   
@@ -43,6 +47,8 @@ object Stages {
     type FunSym = Lazy[Fun]
     type VarSym = Lazy[Local]
     
+    type TypeParam = AbsTyp //Lazy[AbsTyp]
+    
 //    type Term = Expr
     
 //    def fname(s: FunSym) = s.get.nam.toString
@@ -52,36 +58,55 @@ object Stages {
 //    }
     def fname(s: FunSym) = "??"
     def tname(s: TypSym) = "??"
+    def vname(s: VarSym) = "??"
+    def tpname(s: TypeParam) = s.nam
   }
   
-  object Resolved extends Stage with Pretyped {
-    
-    type TypSym = Cyclic[Typ]
-//    type FunSym = Fun
-    type FunSym = Cyclic[Fun]  // Fun
-//    type FunSym = Lazy[Fun]  // Fun
-    type VarSym = Local
-    
-//    type Term = Expr
-    
-//    def fname(s: FunSym) = s.nam.toString
-    def fname(s: FunSym) = s.value.nam.toString
-    def tname(s: TypSym) = s.value.nam.toString
-  }
-  
-  object Typed extends Stage {
-    import typing._
+  trait ResolvedStage {
+  self: Stage =>
     
     type TypSym = Cyclic[Typ]
     type FunSym = Cyclic[Fun]
     type VarSym = Local
     
-    type Term = Typd[Expr]
+    type TypeParam = AbsTyp
     
-    type TypeSpec = Type
     
     def fname(s: FunSym) = s.value.nam.toString
     def tname(s: TypSym) = s.value.nam.toString
+    def vname(s: VarSym) = s.nam.toString
+    def tpname(s: TypeParam): Str = s.nam
+    
+  }
+  
+  object Resolved extends Stage with Pretyped with ResolvedStage {
+    
+//    type TypSym = Cyclic[Typ]
+////    type FunSym = Fun
+//    type FunSym = Cyclic[Fun]  // Fun
+////    type FunSym = Lazy[Fun]  // Fun
+//    type VarSym = Local
+    
+//    type Term = Expr
+    
+////    def fname(s: FunSym) = s.nam.toString
+//    def fname(s: FunSym) = s.value.nam.toString
+//    def tname(s: TypSym) = s.value.nam.toString
+  }
+  
+  object Typed extends Stage with ResolvedStage {
+    import typing._
+    
+//    type TypSym = Cyclic[Typ]
+//    type FunSym = Cyclic[Fun]
+//    type VarSym = Local
+    
+    type Term = Typd[Expr]
+    
+    type TypeSpec = Type
+//    
+//    def fname(s: FunSym) = s.value.nam.toString
+//    def tname(s: TypSym) = s.value.nam.toString
   }
   
   

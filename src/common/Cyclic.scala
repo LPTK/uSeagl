@@ -10,6 +10,8 @@ class Cyclic[+T](expr: Cyclic[T] => T, toStr: T => String = ((t:T) => t.toString
     else _value
   
 //  def map(f: T => T) = 
+    
+  def this(x: T) = this(_ => x)
   
   override def toString =
     if (_value == null) "[Cyclic in resolution]"
@@ -18,7 +20,7 @@ class Cyclic[+T](expr: Cyclic[T] => T, toStr: T => String = ((t:T) => t.toString
 
 object Cyclic {
   
-  def apply[T](x: T) = new Cyclic[T](_ => x)
+//  def apply[T](x: T) = new Cyclic[T](_ => x)
   def unapply[T](x: Cyclic[T]) = Some(x.value)
   
 //  implicit def plain2cyclic[T](t: T) = new Cyclic[T](_ => t)

@@ -15,12 +15,13 @@ trait Stage extends Exprs with Types with Pgrms {
   type Decl
   
   type TypeSpec
-  
+  type TypeParam
   
   
   def fname(s: FunSym): Str
   def tname(s: TypSym): Str
-  
+  def vname(s: VarSym): Str
+  def tpname(s: TypeParam): Str  
   
 }
 

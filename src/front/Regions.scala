@@ -9,6 +9,7 @@ object Regions {
   val Reg = XReg
   object XReg {
     val empty = XReg(Empty)
+    def apply(id: VId): XReg = XReg(Sym(id.sym))
   }
   
   /** Exact region */

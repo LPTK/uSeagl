@@ -8,15 +8,34 @@ import Regions._
 trait Exprs {
 self: Stage =>
   
-  trait Stmt
+  trait Stmt {
+    
+    override def toString = this match {
+      case Binding(nam, valu) => s"$nam = $valu"
+      case Var(s) => s"${vname(s)}"
+      case FCall(f, targs, rargs, args) =>
+        fname(f) + mkTyps(targs) + mkRegs(rargs) + mkArgs(args) //s"${fname(f)}${mkArgs}"
+      case Build(typ, args) =>
+        (typ) + mkArgs(args) //s"${fname(f)}${mkArgs}"
+      case Block(stmts, ret) => s"{${stmts map (_.toString+"; ")}$ret}"
+      case IntLit(n) => n.toString
+      case Ite(c,t,e) => s"if $c then $t else $e"
+      case NilExpr => s"nil"
+      case FieldAccess(obj, id) => s"$obj.$id"
+      case FieldAssign(obj, id, value) => s"$obj.$id <- $value"
+      case Take(obj, id) => s"take $obj.$id"
+    }
+    
+  }
+  
   trait Expr extends Stmt
   
   trait BasicExpr extends Expr
   
 //  case class Var(nam: VId) extends BasicExpr
   case class Var(sym: VarSym) extends BasicExpr
-  case class FCall(f: FunSym, targs: Opt[Seq[Type]], rargs: Opt[Seq[Reg]], args: Seq[Term]) extends BasicExpr {
-    override def toString = s"CALL ${fname(f)} ${args mkString ","}"
+  case class FCall(f: FunSym, targs: Seq[Type], rargs: Seq[Reg], args: Seq[Term]) extends BasicExpr {
+//    override def toString = s"CALL ${fname(f)} ${args mkString ","}"
   }
   case class Build(typ: Type, args: Seq[Term]) extends BasicExpr
   

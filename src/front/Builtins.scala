@@ -1,11 +1,14 @@
 package front
 
 import common.Stage
+import common.Stages._
 
-case class Builtins[S <: Stage](s: S) {
+//case class Builtins[S <: Stage](s: S) {
 //case class Builtins[S <: Stage](s: S) {
 //self: Pgrms =>
-  import s._
+object Builtins {
+//  import s._
+  import Ast._
   
   val btyps = Seq(
       ConcTyp(TId("Ref"), Seq(TId("T")), Seq(VId("Pte")), Seq()),
