@@ -13,7 +13,7 @@ object Memory {
   
 //  type Heap = Map[Addr,Obj]
   
-  sealed trait Ptr {
+  sealed trait Value {
     
     override def toString = this match {
       case OwnPtr(a) => s"Own @$a"
@@ -31,8 +31,10 @@ object Memory {
     
   }
   
+  sealed trait Ptr extends Value
+  
   object Ptr {
-    def unapply(p: Ptr) = p match {
+    def unapply(p: Value) = p match {
       case OwnPtr(a) => Some(a)
       case RefPtr(a) => Some(a)
       case Nil => None
@@ -41,12 +43,12 @@ object Memory {
   }
   case class OwnPtr(a: Addr) extends Ptr
   case class RefPtr(a: Addr) extends Ptr
-  case object Nil extends Ptr
-  case class IntVal(n: Int) extends Ptr
+  case object Nil extends Value
+  case class IntVal(n: Int) extends Value
   
-  case class Obj(fields: Map[VId, Ptr]) {
+  case class Obj(fields: Map[VId, Value]) {
     def apply(id: VId) = fields(id)  // TODO handle field missing
-    def update(id: VId, v: Ptr) = fields(id) = v // idem
+    def update(id: VId, v: Value) = fields(id) = v // idem
   }
   object Obj {
     val empty = Obj(Map())
@@ -64,10 +66,10 @@ object Memory {
       OwnPtr(addr)
     }
     
-    def dealloc(ptrs: collection.Traversable[Ptr]) {
+    def dealloc(ptrs: collection.Traversable[Value]) {
       ptrs foreach dealloc
     }
-    def dealloc(ptr: Ptr): Unit = ptr match {
+    def dealloc(ptr: Value): Unit = ptr match {
       case OwnPtr(a) => dealloc(a)
       case _ =>
     }

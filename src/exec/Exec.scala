@@ -20,30 +20,33 @@ import Predef.{any2stringadd => _, _}
 class Exec {
   import Stages.Resolved._
   import collection.mutable.HashMap
-  import collection.mutable.HashSet
+  import collection.mutable.ArrayBuffer
 //  import collection.mutable._
   import collection.Set
   
-  type Gamma = Map[VId,Ptr]
+  type Gamma = Map[VId,Value]
   
   val h: Heap = new Heap
   
   def apply(e: Expr, g: Gamma = Map()) = {
     
-    def ref(p: Ptr) = (p match {
+//    def E[T] = Set[T]()
+    val E = Seq()
+    
+    def ref(p: Value) = (p match {
       case OwnPtr(a) => RefPtr(a)
       case _ => p
     }) //and println
-    def mkUnit = (h.alloc(Obj.empty), E[OwnPtr])
+    def mkUnit = (h.alloc(Obj.empty), E)
     
-    def E[T] = Set[T]()
+    type Tmps = Seq[Ptr]
     
-    implicit class Tmp(val x: (Ptr,Set[OwnPtr])) {
-      def + (tmp: Set[OwnPtr]) = (x._1, x._2 ++ tmp)
+    implicit class TmpHelp(val x: (Value,Tmps)) {
+      def + (tmp: Tmps) = (x._1, x._2 ++ tmp)
     }
     
     /** returns the result value and temporaries to be deallocated */
-    def rec(e: Expr)(implicit g: Gamma): (Ptr,Set[OwnPtr]) = e match {
+    def rec(e: Expr)(implicit g: Gamma): (Value,Tmps) = e match {
       
       case NilExpr => (Nil,E)
       
@@ -73,7 +76,7 @@ class Exec {
           
   //        val fs = for (i <- 0 until par.size; id = par(i).nam; valu = rec(args(i)))
   //          yield id -> valu;
-          val tmps = HashSet[OwnPtr]()
+          val tmps = ArrayBuffer[Ptr]()
           val fs = for (i <- 0 until par.size; (valu,tmp) = rec(args(i)))
             yield par(i).nam -> valu oh_and (tmps ++= tmp)
           
@@ -85,10 +88,10 @@ class Exec {
       
       case FCall(f, _, _, args) =>
         val par = f.params
-        val tmps = HashSet[OwnPtr]()
+        val tmps = ArrayBuffer[Ptr]()
         val g2 = for (i <- 0 until par.size; (valu,tmp) = rec(args(i)))
           yield par(i).nam -> valu oh_and (tmps ++= tmp)
-        rec(f.body)(g2 toMap) + tmps
+        rec(f.body)(g2 toMap) + tmps + g2.collect{case(id,ptr:Ptr) => ptr}
       
       case FieldAccess(obj, id) =>
         val (ptr,tmp) = rec(obj)
@@ -117,6 +120,7 @@ class Exec {
             h(a)(id) = Nil
             (r,tmp)
           case Nil => (Nil, tmp)
+          case _ => throw new FieldAccessEE(ptr)
         }
         
       /** At block exit, every (local) temporary is deallocated, as well as intermediate exprs */
@@ -124,14 +128,16 @@ class Exec {
         case Seq(Binding(id,e2), rest @ _*) =>
           val (p,t) = rec(e2)
           val (p2,t2) = rec(Block(rest, e))(g + (id -> p)) + t
-          h.dealloc(p)
-          t2 foreach h.dealloc
+//          h.dealloc(p)
+//          t2 foreach h.dealloc
+          h.dealloc(t2 :+ p)
           (p2,E)
         case Seq(ex: Expr, rest @ _*) =>
           val (p,t) = rec(ex)
           val (p2,t2) = rec(Block(rest, e))
-          h.dealloc(p)
-          t2 foreach h.dealloc
+//          h.dealloc(p)
+//          t2 foreach h.dealloc
+          h.dealloc(t2 :+ p)
           (p2,E)
         case Seq() =>
           val (p,t) = rec(e)
@@ -148,7 +154,7 @@ class Exec {
     ptr
   }
   
-  def dispVal(v: Ptr, done: Set[Ptr] = Set()): Str = {
+  def dispVal(v: Value, done: Set[Value] = Set()): Str = {
 //  if (done(v)) "..." else {
     def dispAddr(a: Addr) = h.store get a match {
       case _ if (done(v)) => "..."

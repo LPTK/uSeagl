@@ -16,7 +16,7 @@ object REPL extends App {
   val rs = new Resolve
   val ex = new Exec
   
-  val ctx = collection.mutable.HashMap[VId,Ptr]()
+  val ctx = collection.mutable.HashMap[VId,Value]()
   
   def rep {
     
