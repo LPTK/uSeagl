@@ -34,12 +34,13 @@ class Exec {
     
     def rec(e: Expr)(implicit g: Gamma): Ptr = e match {
       
-      case Integer(n) => IntVal(n)
+      case IntLit(n) => IntVal(n)
       
-      case Var(s) => ref(g(s.nam))
+      case Var(s) => ref(g(s.nam)) // TODO handle not in ctx
 //      case Build(typ, args) => h.alloc(Obj(
 //          typ.t.params.z map {p => }
 //        ))
+      
       case Build(typ, args) => typ.t.value match {
         case t: ConcTyp =>
           val par = t.params
@@ -58,6 +59,7 @@ class Exec {
           h.alloc(Obj(HashMap(fs:_*)))
         case t: AbsTyp => throw new AbsTypeBuildException(t)
       }
+      
       case FCall(f, _, _, args) =>
         val par = f.params
         val g2 = for (i <- 0 until par.size)
@@ -91,7 +93,16 @@ class Exec {
           case Nil => Nil
         }
         
-        
+      case Block(stmts, e) => stmts match {
+        case Seq(Binding(id,e), rest @ _*) =>
+          val p = rec(e)
+          rec(Block(rest, e))(g + (id -> p))
+        case Seq(ex: Expr, rest @ _*) =>
+          rec(ex)
+          rec(Block(rest, e))
+        case Seq() => rec(e)
+      }
+      
     }
     
 //    println(g)

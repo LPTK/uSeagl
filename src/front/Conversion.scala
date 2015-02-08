@@ -28,7 +28,8 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
 //    case a.FCall(fs,ta,ra,a) => b.FCall(fun(fs), )
     case a.FCall(fs,ta,ra,a) => FCall(funs(fs), None, None, a map terms)
     case a.Build(t,a) => Build(apply(t), a map terms)
-    case a.Integer(n) => Integer(n)
+    case a.IntLit(n) => IntLit(n)
+    case a.Block(s,e) => Block(s map apply, terms(e))
   }
   
   def apply(x: a.Fun): Fun =
@@ -46,9 +47,14 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   
   def apply(x: a.Var): Var = ???
   
+  def apply(x: a.Stmt): Stmt = x match {
+    case x: a.Expr => apply(x)
+    case x: a.Binding => apply(x)
+  }
+  
   def apply(x: a.Local): Local = Local(x.nam, x.typ map apply)
   
-  def apply(x: a.Binding): Binding = Binding(x.nam, apply(x.value))
+  def apply(x: a.Binding): Binding = Binding(x.nam, terms(x.value))
   
   /** Cycle handling */
   
@@ -191,6 +197,12 @@ class Presolve extends StageConverter(Ast, Resolving) {
 //    super.apply(x) and (ctx(x.nam) = (_:Binding).value)
 //    super.apply(x) and ((b:Binding) => ctx(x.nam) = Local(x.nam, b.value))
     super.apply(x) oh_and (ctx(x.nam) = Local(x.nam, None))
+  
+  override def apply(x: a.Expr): Expr = x match {
+    case a.Block(s,e) =>
+      pushCtx; super.apply(x) oh_and popCtx
+    case _ => super.apply(x)
+  }
   
 }
 

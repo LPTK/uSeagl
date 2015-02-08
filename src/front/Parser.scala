@@ -91,14 +91,17 @@ object Parser extends StandardTokenParsers with regex.RegParser {
     case id ~ e => Binding(id, e)
   }}
   
-  def block: Parser[Block] = ("{" ~> repsep(stmt,";") <~ "}") ^^ {
-    case stmts => Block(stmts)
+//  def block: Parser[Block] = ("{" ~> repsep(stmt,";") <~ "}") ^^ {
+//    case stmts => Block(stmts)
+//  }
+  def block: Parser[Block] = ("{" ~> rep(stmt <~ ";") ~ expr <~ "}") ^^ {
+    case stmts ~ ret => Block(stmts, ret)
   }
   def parblock: Parser[Expr] = ("(" ~> expr <~ ")") | (
     "(" ~ ")" ^^ {_ => Build(Type(TId("Unit"),None,None),Seq())}
   )
   
-  def int: Parser[Expr] = numericLit ^^ {s => Integer(s.toInt)}
+  def int: Parser[Expr] = numericLit ^^ {s => IntLit(s.toInt)}
   
   def bexpr: Parser[Expr] = int | block | parblock | fcall | (varname ^^ (Var))
   

@@ -34,6 +34,9 @@ object REPL extends App {
       case Success(Var(VId('ctx)), _) =>
         println(ctx)
         
+      case Success(IntLit(42), _) =>
+        while(true) ()
+        
       // Legit stuff:
       case Success(fun: Fun, _) =>
         
