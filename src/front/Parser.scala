@@ -127,7 +127,8 @@ object Parser extends StandardTokenParsers with regex.RegParser {
 //  def faccess = (bexpr <~ ".") ~ repsep(varname, ".") ^^ {
   def faccess = (bexpr <~ ".") ~ varname ~ rep("." ~> varname) ^^ {
     case e ~ vid ~ vids =>
-      vids.foldRight(FieldAccess(e, vid)){ case (id,e) => FieldAccess(e, id) }
+//      vids.foldRight(FieldAccess(e, vid)){ case (id,e) => FieldAccess(e, id) }
+      vids.foldLeft(FieldAccess(e, vid)){ case (e,id) => FieldAccess(e, id) }
   }
   
 //  def freass: Parser[FieldAssign] = (bexpr <~ ".") ~ varname ~ ("<-" ~> expr) ^^ {

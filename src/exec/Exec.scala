@@ -27,6 +27,7 @@ class Exec {
   type Gamma = Map[VId,Value]
   
   val h: Heap = new Heap
+  import h.dispVal
   
   def apply(e: Expr, g: Gamma = Map()) = {
     
@@ -106,6 +107,10 @@ class Exec {
         val (v,tmp2) = rec(value)
         ptr match {
           case Ptr(a) =>
+//            println(dispVal(h(a)(id)))
+            h.dealloc(h(a)(id))
+//            println(a,id,h(a)(id))
+//            println(dispVal(h(a)(id)))
             h(a)(id) = v
             mkUnit + tmp + tmp2
           case Nil => mkUnit + tmp + tmp2
@@ -152,23 +157,6 @@ class Exec {
     val (ptr,tmp) = rec(e)(g)
     h.dealloc(tmp)
     ptr
-  }
-  
-  def dispVal(v: Value, done: Set[Value] = Set()): Str = {
-//  if (done(v)) "..." else {
-    def dispAddr(a: Addr) = h.store get a match {
-      case _ if (done(v)) => "..."
-      case Some(obj) => obj.fields map {
-        case (id,p) => s"$id: ${dispVal(p, done + v)}"
-      } mkString ("{", ", ", "}")
-      case None => "[deallocated]"
-    }
-    v match {
-      case OwnPtr(a) => s"=> ${dispAddr(a)}"
-      case RefPtr(a) => s"-> ${dispAddr(a)} @ ${a.value}"
-      case Nil => "Nil"
-      case IntVal(n) => s"$n"
-    }
   }
   
 }

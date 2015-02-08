@@ -16,8 +16,8 @@ object Memory {
   sealed trait Value {
     
     override def toString = this match {
-      case OwnPtr(a) => s"Own @$a"
-      case RefPtr(a) => s"Ref @$a"
+      case OwnPtr(a) => s"Own @ ${a.value}"
+      case RefPtr(a) => s"Ref @ ${a.value}"
       case Nil => "Nil"
       case IntVal(n) => s"$n"
     }
@@ -70,12 +70,16 @@ object Memory {
       ptrs foreach dealloc
     }
     def dealloc(ptr: Value): Unit = ptr match {
-      case OwnPtr(a) => dealloc(a)
+      case OwnPtr(a) => dealloc(a)  // oh_and (println(">>",ptr))
       case _ =>
     }
     def dealloc(a: Addr) {
+//      println(s"dealloc $a")
       check(store isDefinedAt a)
-      store(a).fields mapValues dealloc
+//      store(a).fields mapValues println
+//      println(store(a).fields.values)
+//      store(a).fields mapValues dealloc
+      store(a).fields foreach {case(k,v) => dealloc(v)}
       check(store isDefinedAt a)
       store -= a
     }
@@ -85,12 +89,52 @@ object Memory {
 //    }
     def apply(a: Addr) = store(a)
     
+    def dispVal(v: Value, done: Set[Value] = Set()): Str = {
+  //  if (done(v)) "..." else {
+      def dispAddr(a: Addr) = store get a match {
+        case _ if (done(v)) => "..."
+        case Some(obj) => obj.fields map {
+          case (id,p) => s"$id: ${dispVal(p, done + v)}"
+        } mkString ("{", ", ", "}")
+        case None => "[deallocated]"
+      }
+      v match {
+        case OwnPtr(a) => s"=> ${dispAddr(a)}"
+        case RefPtr(a) => s"-> ${dispAddr(a)} @ ${a.value}"
+        case Nil => "Nil"
+        case IntVal(n) => s"$n"
+      }
+    }
+    
+//    override def toString = store mkString("[","\n","]")
+//    override def toString = store.map { case(addr,obj) => s"${addr.value} " + dispVal(OwnPtr(addr)) } mkString("[\n  ","\n  ","\n]")
+    override def toString = store.map {
+      case(addr,obj) => s"${addr.value}: " + (obj.fields map {
+        case (id, v) => s"$id = $v"
+      } mkString("{",", ","}"))
+     } mkString("[\n  ","\n  ","\n]")
   }
   
   
   
   
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

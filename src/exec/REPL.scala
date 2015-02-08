@@ -34,6 +34,9 @@ object REPL extends App {
       case Success(Var(VId('ctx)), _) =>
         println(ctx)
         
+      case Success(Var(VId('h)), _) if !(ctx isDefinedAt VId('h)) =>
+        println(ex.h)
+        
       case Success(IntLit(42), _) =>
         while(true) ()
         
@@ -52,7 +55,8 @@ object REPL extends App {
       case Success(e: Expr, _) =>
         val re = rs(ps(e))
         val r = ex(re, ctx toMap)
-        println(ex.dispVal(r))
+        println(ex.h.dispVal(r))
+        ex.h.dealloc(r)
         // TODO put in ctx
       
       case Success(b @ Binding(_id, value), _) =>
@@ -60,9 +64,11 @@ object REPL extends App {
 //        println(ctx(id))
         val a = rs(ps(value))
         val Resolved.Binding(id, v) = rs(ps(b))
+        if (ctx isDefinedAt id)
+          ex.h.dealloc(ctx(id))
         ctx(id) = ex(v, ctx toMap)
 //        println(v)
-        println(s"$id: ${ex.dispVal(ctx(id))}")
+        println(s"$id: ${ex.h.dispVal(ctx(id))}")
       
       case f: Failure =>
         println(f)

@@ -16,3 +16,38 @@ typ A(b: Int)
 a = new A(42)
 a.b <- 0
 
+
+
+
+
+
+typ List[T](head: T, tail: List)
+a = new List(1, new List(2, new List(3, nil)))
+b = a.tail.tail
+a.tail <- 0
+a
+b
+
+
+typ List[T](head: T, tail: List)
+a = new List(1, new List(2, new List(3, nil)))
+
+b = a.tail.tail
+a.tail <- 0
+a
+b
+
+
+typ List[T](head: T, tail: List)
+a = new List(1, new List(2, new List(3, nil)))
+a.tail <- 0
+
+
+
+
+
+
+
+b.head <- 0
+
+
