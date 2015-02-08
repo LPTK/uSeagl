@@ -33,25 +33,31 @@ class Exec {
     def mkUnit = h.alloc(Obj.empty)
     
     def rec(e: Expr)(implicit g: Gamma): Ptr = e match {
+      
+      case Integer(n) => IntVal(n)
+      
       case Var(s) => ref(g(s.nam))
 //      case Build(typ, args) => h.alloc(Obj(
 //          typ.t.params.z map {p => }
 //        ))
-      case Build(typ, args) =>
-        val par = typ.t.params
-//        h.alloc(Obj(HashMap(
-//          { for (i <- 0 until par.size; id = par(i).nam; valu = rec(args(i)))
-//            yield (id -> valu) } : _*
-//        )))
-        
-//        val fs = for (i <- 0 until par.size; id = par(i).nam; valu = rec(args(i)))
-//          yield id -> valu;
-        val fs = for (i <- 0 until par.size)
-          yield par(i).nam -> rec(args(i));
-        
-//        h.alloc(Obj(HashMap(fs.toArray: _*)))
-//        h.alloc(Obj(HashMap(fs.toMap)))
-        h.alloc(Obj(HashMap(fs:_*)))
+      case Build(typ, args) => typ.t.value match {
+        case t: ConcTyp =>
+          val par = t.params
+  //        h.alloc(Obj(HashMap(
+  //          { for (i <- 0 until par.size; id = par(i).nam; valu = rec(args(i)))
+  //            yield (id -> valu) } : _*
+  //        )))
+          
+  //        val fs = for (i <- 0 until par.size; id = par(i).nam; valu = rec(args(i)))
+  //          yield id -> valu;
+          val fs = for (i <- 0 until par.size)
+            yield par(i).nam -> rec(args(i));
+          
+  //        h.alloc(Obj(HashMap(fs.toArray: _*)))
+  //        h.alloc(Obj(HashMap(fs.toMap)))
+          h.alloc(Obj(HashMap(fs:_*)))
+        case t: AbsTyp => throw new AbsTypeBuildException(t)
+      }
       case FCall(f, _, _, args) =>
         val par = f.params
         val g2 = for (i <- 0 until par.size)
@@ -88,7 +94,7 @@ class Exec {
         
     }
     
-    println(g)
+//    println(g)
     rec(e)(g)
   }
   

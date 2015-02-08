@@ -19,11 +19,13 @@ object Memory {
       case OwnPtr(a) => Some(a)
       case RefPtr(a) => Some(a)
       case Nil => None
+      case IntVal(_) => None
     }
   }
   case class OwnPtr(a: Addr) extends Ptr
   case class RefPtr(a: Addr) extends Ptr
   case object Nil extends Ptr
+  case class IntVal(n: Int) extends Ptr
   
   case class Obj(fields: Map[VId, Ptr]) {
     def apply(id: VId) = fields(id)  // TODO handle field missing

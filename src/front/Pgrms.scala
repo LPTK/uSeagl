@@ -36,13 +36,24 @@ self: Stage =>
 //  class FId(sym: Sym) extends Id(sym)
   
   
-  case class Pgrm(typs: Map[Id,Typ], funs: Map[Id,Fun])
+  case class Pgrm(typs: Map[Id,ConcTyp], funs: Map[Id,Fun])
   
   trait Decl
   
-  case class Typ(nam: TId, typs: Seq[TId], regs: Seq[VId], params: Seq[Local]) extends Decl with Unique
+  
+  sealed trait Typ extends Unique {
+    val nam: TId
+    val typs: Seq[TId]
+    val regs: Seq[VId]
+  }
+  
+  case class ConcTyp(nam: TId, typs: Seq[TId], regs: Seq[VId], params: Seq[Local]) extends Decl with Typ
+
+  case class AbsTyp(nam: TId, typs: Seq[TId], regs: Seq[VId]) extends Typ
+  
   
   case class Type(t: TypSym, targs: Opt[Seq[Type]], rargs: Opt[Seq[Reg]])
+  
   
   case class Fun (
       nam: FId,

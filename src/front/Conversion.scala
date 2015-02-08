@@ -26,15 +26,23 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   def apply(x: a.Expr): Expr = x match {
     case a.Var(vs) => Var(vars(vs))
 //    case a.FCall(fs,ta,ra,a) => b.FCall(fun(fs), )
-    case a.FCall(fs,ta,ra,a) => FCall(funs(fs), None, None, Seq())
+    case a.FCall(fs,ta,ra,a) => FCall(funs(fs), None, None, a map terms)
     case a.Build(t,a) => Build(apply(t), a map terms)
+    case a.Integer(n) => Integer(n)
   }
   
-  def apply(x: a.Fun): Fun = Fun(x.nam, x.typs, x.regs, x.params map apply, x.ret map apply, Spec.empty, terms(x.body)) 
+  def apply(x: a.Fun): Fun =
+    Fun(x.nam, x.typs, x.regs, x.params map apply, x.ret map apply, Spec.empty, terms(x.body)) 
   
   def apply(x: a.Type): Type = Type(typs(x.t), None, None)
   
-  def apply(x: a.Typ): Typ = Typ(x.nam, x.typs, x.regs, x.params map apply)
+  def apply(x: a.Typ): Typ = x match {
+    case t: a.ConcTyp => apply(t)
+    case t: a.AbsTyp => apply(t)
+    case _ => wtf
+  }
+  def apply(x: a.ConcTyp): ConcTyp = ConcTyp(x.nam, x.typs, x.regs, x.params map apply)
+  def apply(x: a.AbsTyp): AbsTyp = AbsTyp(x.nam, x.typs, x.regs)
   
   def apply(x: a.Var): Var = ???
   
@@ -163,7 +171,7 @@ class Presolve extends StageConverter(Ast, Resolving) {
   
   override def apply(x: a.Fun) = { // TODO use and
     pushCtx
-    x.typs foreach (p => ctx(p) = ???)
+    x.typs foreach (p => ctx(p) = AbsTyp(p, Seq(), Seq()))
     x.params foreach (p => ctx(p.nam) = apply(p))
 //    println(ctx.locTable)
     val r = super.apply(x)
@@ -171,8 +179,13 @@ class Presolve extends StageConverter(Ast, Resolving) {
     ctx(x.nam) = r
     r
   }
-  override def apply(x: a.Typ) =
-    super.apply(x) and (ctx(x.nam) = _)
+//  override def apply(x: a.ConcTyp) =
+//    super.apply(x) and (ctx(x.nam) = _)
+  override def apply(x: a.ConcTyp) = {
+    pushCtx
+    x.typs foreach (p => ctx(p) = AbsTyp(p, Seq(), Seq()))
+    super.apply(x)
+  } and { popCtx; ctx(x.nam) = _ }
   
   override def apply(x: a.Binding) =
 //    super.apply(x) and (ctx(x.nam) = (_:Binding).value)

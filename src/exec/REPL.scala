@@ -27,6 +27,14 @@ object REPL extends App {
 //    println(t)
     
     try { t match {
+      // Commands:
+      case Success(Var(VId('exit)), _) =>
+        System.exit(0)
+        
+      case Success(Var(VId('ctx)), _) =>
+        println(ctx)
+        
+      // Legit stuff:
       case Success(fun: Fun, _) =>
         
         val f = ps(fun)
@@ -59,7 +67,7 @@ object REPL extends App {
       case _ => wtf
         
     }} catch {
-      case CompileError(msg) => println(s"Compile error: $msg")
+      case CompileError(msg) => System.err.println(s"Compile error: $msg")
 //      case _ if false => ???
     }
     

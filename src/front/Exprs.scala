@@ -23,6 +23,8 @@ self: Stage =>
   case class Binding(nam: VId, value: Expr) extends Stmt
   case class Block(smts: Seq[Stmt]) extends BasicExpr
   
+  case class Integer(value: Int) extends BasicExpr
+  
   
   case class FieldAccess(obj: Term, id: VId) extends BasicExpr
   

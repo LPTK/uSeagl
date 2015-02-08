@@ -8,8 +8,8 @@ case class Builtins[S <: Stage](s: S) {
   import s._
   
   val btyps = Seq(
-      Typ(TId("Ref"), Seq(TId("T")), Seq(VId("Pte")), Seq()),
-      Typ(TId("Unit"), Seq(), Seq(), Seq())
+      ConcTyp(TId("Ref"), Seq(TId("T")), Seq(VId("Pte")), Seq()),
+      ConcTyp(TId("Unit"), Seq(), Seq(), Seq())
   )
   
   
