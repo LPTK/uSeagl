@@ -94,8 +94,24 @@ object Parser extends StandardTokenParsers with regex.RegParser {
   def block: Parser[Block] = ("{" ~> repsep(stmt,";") <~ "}") ^^ {
     case stmts => Block(stmts)
   }
+  def parblock: Parser[Expr] = ("(" ~> expr <~ ")")
   
-  def expr: Parser[Expr] = block | (ident ~ expr ^^ { case id~e => FCall(FId(id),None,None,Seq(e))}) | (varname ^^ (Var))
+  def bexpr: Parser[Expr] = block | parblock | fcall | (varname ^^ (Var))
+  
+  def expr: Parser[Expr] = faccess | bexpr
+  
+  def fcall = ident ~ ("(" ~> repsep(expr,",") <~ ")") ^^ {
+    case id ~ es => FCall(FId(id), None, None, es)
+  }
+  
+//  def faccess = expr ~ ("." ~> varname) ^^ {
+//    case e ~ vid => FieldAccess(e, vid)
+//  }
+//  def faccess = (bexpr <~ ".") ~ repsep(varname, ".") ^^ {
+  def faccess = (bexpr <~ ".") ~ varname ~ rep("." ~> varname) ^^ {
+    case e ~ vid ~ vids =>
+      vids.foldRight(FieldAccess(e, vid)){ case (id,e) => FieldAccess(e, id) }
+  }
   
   def varname: Parser[VId] = ident ^^ (VId.apply)
   

@@ -1,0 +1,5 @@
+typ List[T](head: T, tail: List)
+fun get[T](ls: List[T], n: Int): Ref[T]{ls.head*.tail} = lol
+
+
+

@@ -29,15 +29,15 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
     case a.FCall(fs,ta,ra,a) => FCall(funs(fs), None, None, Seq())
   }
   
-  def apply(x: a.Fun): Fun = Fun(x.nam, Seq(), Seq(), Seq(), x.ret map apply, Spec.empty, terms(x.body)) 
+  def apply(x: a.Fun): Fun = Fun(x.nam, x.typs, x.regs, x.params map apply, x.ret map apply, Spec.empty, terms(x.body)) 
   
   def apply(x: a.Type): Type = Type(typs(x.t), None, None)
   
-  def apply(x: a.Typ): Typ = ???
+  def apply(x: a.Typ): Typ = Typ(x.nam, x.typs, x.regs, x.params map apply)
   
   def apply(x: a.Var): Var = ???
   
-  def apply(x: a.Local): Local = ???
+  def apply(x: a.Local): Local = Local(x.nam, apply(x.typ))
   
   
   /** Cycle handling */
@@ -115,6 +115,10 @@ class Read extends StageConverter(Ast, Resolving) {
   }
   private var ctx = Ctx(Map(), Map(), Map(), None)
   
+  val builtins = Builtins(Ast)  // Builtins[Ast.type](Ast)
+//  builtins.btyps foreach (t => ctx(t.nam) = apply(t))
+  builtins.btyps foreach apply
+    
 //  def ult[T](e: => T) = Lazy(Try(e).transform(x=>Try(x), {
 //    case e: java.util.NoSuchElementException => Failure(IdentifierNotFound(null))
 //  })) // Lazy(e) //unit(Lazy(Try(e)))
@@ -125,11 +129,14 @@ class Read extends StageConverter(Ast, Resolving) {
   def vars(x: a.VarSym) = ult(ctx(x))
   def terms(x: a.Term)  = apply(x)
   
-  override def apply(x: a.Fun) = { // TODO use oh_and
+  override def apply(x: a.Fun) = { // TODO use and
     val r = super.apply(x)
     ctx(x.nam) = r
     r
   }
+  override def apply(x: a.Typ) =
+    super.apply(x) and (ctx(x.nam) = _)
+  
 }
 
 //class Resolve extends StageConverter[Resolving.type, Resolved.type](Resolving, Resolved) with FallibleConverter {

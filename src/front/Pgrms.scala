@@ -36,6 +36,8 @@ self: Stage =>
 //  class FId(sym: Sym) extends Id(sym)
   
   
+  case class Pgrm(typs: Map[Id,Typ], funs: Map[Id,Fun])
+  
   trait Decl
   
   case class Typ(nam: TId, typs: Seq[TId], regs: Seq[VId], params: Seq[Local]) extends Decl with Unique
@@ -51,8 +53,6 @@ self: Stage =>
       spec: Spec,
       body: Term  // Cyclic[Term]
   ) extends Decl with Unique
-  
-  case class Pgrm(typs: Map[Id,Typ], funs: Map[Id,Fun])
   
   
   /** will incorporate more complex info, eg: cross-scoping info */
