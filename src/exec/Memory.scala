@@ -13,7 +13,24 @@ object Memory {
   
 //  type Heap = Map[Addr,Obj]
   
-  sealed trait Ptr
+  sealed trait Ptr {
+    
+    override def toString = this match {
+      case OwnPtr(a) => s"Own @$a"
+      case RefPtr(a) => s"Ref @$a"
+      case Nil => "Nil"
+      case IntVal(n) => s"$n"
+    }
+//    override def toString = toString(Set())
+//    def toString(done: Set[Ptr]) = this match {
+//      case OwnPtr(a) => s"Own @$a = ${dispObj(a)}"
+//      case RefPtr(a) => s"Ref @$a = ${dispObj(a)}"
+//      case Nil => "Nil"
+//      case IntVal(n) => s"$n"
+//    }
+    
+  }
+  
   object Ptr {
     def unapply(p: Ptr) = p match {
       case OwnPtr(a) => Some(a)

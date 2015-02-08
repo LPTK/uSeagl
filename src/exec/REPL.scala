@@ -52,7 +52,7 @@ object REPL extends App {
       case Success(e: Expr, _) =>
         val re = rs(ps(e))
         val r = ex(re, ctx toMap)
-        println(r)
+        println(ex.dispVal(r))
         // TODO put in ctx
       
       case Success(b @ Binding(_id, value), _) =>
@@ -62,7 +62,7 @@ object REPL extends App {
         val Resolved.Binding(id, v) = rs(ps(b))
         ctx(id) = ex(v, ctx toMap)
 //        println(v)
-        println(s"$id = ${ctx(id)}")
+        println(s"$id: ${ex.dispVal(ctx(id))}")
       
       case f: Failure =>
         println(f)
@@ -71,6 +71,7 @@ object REPL extends App {
         
     }} catch {
       case CompileError(msg) => System.err.println(s"Compile error: $msg")
+      case Exceptions.ExecException(msg) => System.err.println(s"Runtime error: $msg")
 //      case _ if false => ???
     }
     

@@ -30,6 +30,9 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
     case a.Build(t,a) => Build(apply(t), a map terms)
     case a.IntLit(n) => IntLit(n)
     case a.Block(s,e) => Block(s map apply, terms(e))
+    case a.Ite(c,t,e) => Ite(terms(c),terms(t),terms(e))
+    case a.NilExpr => NilExpr
+    case a.FieldAccess(e, id) => FieldAccess(terms(e), id)
   }
   
   def apply(x: a.Fun): Fun =

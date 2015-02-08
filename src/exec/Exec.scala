@@ -34,7 +34,18 @@ class Exec {
     
     def rec(e: Expr)(implicit g: Gamma): Ptr = e match {
       
+      case NilExpr => Nil
+      
       case IntLit(n) => IntVal(n)
+//      case BoolLit(b) => BoolVal(b)
+      
+      case Ite(c,t,e) =>
+        val cp = rec(c)
+        cp match {
+          case IntVal(0) => rec(e)
+          case IntVal(_) => rec(t)
+          case _ => throw new IfCondEE(cp)
+        }
       
       case Var(s) => ref(g(s.nam)) // TODO handle not in ctx
 //      case Build(typ, args) => h.alloc(Obj(
@@ -57,7 +68,7 @@ class Exec {
   //        h.alloc(Obj(HashMap(fs.toArray: _*)))
   //        h.alloc(Obj(HashMap(fs.toMap)))
           h.alloc(Obj(HashMap(fs:_*)))
-        case t: AbsTyp => throw new AbsTypeBuildException(t)
+        case t: AbsTyp => throw new AbsTypeBuildEE(t)
       }
       
       case FCall(f, _, _, args) =>
@@ -109,9 +120,32 @@ class Exec {
     rec(e)(g)
   }
   
-  
+  def dispVal(v: Ptr, done: Set[Ptr] = Set()): Str = {
+//  if (done(v)) "..." else {
+    def dispAddr(a: Addr) = h.store get a match {
+      case _ if (done(v)) => "..."
+      case Some(obj) => obj.fields map {
+        case (id,p) => s"$id: ${dispVal(p, done + v)}"
+      } mkString ("{", ", ", "}")
+      case None => "[deallocated]"
+    }
+    v match {
+      case OwnPtr(a) => s"=> ${dispAddr(a)}"
+      case RefPtr(a) => s"-> ${dispAddr(a)} @ ${a.value}"
+      case Nil => "Nil"
+      case IntVal(n) => s"$n"
+    }
+  }
   
 }
+
+
+
+
+
+
+
+
 
 
 

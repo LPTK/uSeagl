@@ -1,5 +1,8 @@
 typ List[T](head: T, tail: List)
-fun get[T](ls: List[T], n: Int): Ref[T]{ls.head*.tail} = lol
+fun get[T](ls: List[T], n: Int): Ref[T]{ls.head*.tail} = if n==0 then ls.head else get(ls.tail, n-1)
 
 
+typ List[T](head: T, tail: List)
+a = new List(1, new List(2, new List(3, nil)))
+a.tail.head
 

@@ -9,7 +9,9 @@ case class Builtins[S <: Stage](s: S) {
   
   val btyps = Seq(
       ConcTyp(TId("Ref"), Seq(TId("T")), Seq(VId("Pte")), Seq()),
-      ConcTyp(TId("Unit"), Seq(), Seq(), Seq())
+      ConcTyp(TId("Unit"), Seq(), Seq(), Seq()),
+//      ConcTyp(TId("Bool"), Seq(), Seq(), Seq()),
+      ConcTyp(TId("Int"), Seq(), Seq(), Seq())
   )
   
   

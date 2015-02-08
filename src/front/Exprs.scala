@@ -25,6 +25,12 @@ self: Stage =>
   
   case class IntLit(value: Int) extends BasicExpr
   
+//  case class BoolLit(value: Bool) extends BasicExpr
+  
+  case class Ite(cond: Term, thn: Term, els: Term) extends BasicExpr
+  
+  case object NilExpr extends BasicExpr
+  
   
   case class FieldAccess(obj: Term, id: VId) extends BasicExpr
   

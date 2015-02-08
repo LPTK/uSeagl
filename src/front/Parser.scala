@@ -12,7 +12,7 @@ object Parser extends StandardTokenParsers with regex.RegParser {
   import Regions._
   
   lexical.delimiters ++= List(".", "{", "}", ",", "=", ";", ":", "(", ")", "[", "]", "|", "=>", "->")
-  lexical.reserved   ++= List("fun", "typ", "@read", "@inval", "@trans")
+  lexical.reserved   ++= List("if", "then", "else", "fun", "typ", "nil", "new", "@read", "@inval", "@trans")
   
   def typ: Parser[ConcTyp] = "typ" ~> ident ~ (typList?) ~ (regList?) ~ (paramList?) ^^ {
     case nam ~ typs ~ regs ~ params => ConcTyp(TId(nam),
@@ -103,7 +103,15 @@ object Parser extends StandardTokenParsers with regex.RegParser {
   
   def int: Parser[Expr] = numericLit ^^ {s => IntLit(s.toInt)}
   
-  def bexpr: Parser[Expr] = int | block | parblock | fcall | (varname ^^ (Var))
+  def build: Parser[Build] = ("new" ~> typez) ~ ("(" ~> repsep(expr,",") <~ ")") ^^ {
+    case t ~ es => Build(t, es)
+  }
+  
+  def bexpr: Parser[Expr] = ("nil" ^^ (_ => NilExpr)) | ite | build | int | block | parblock | fcall | (varname ^^ (Var))
+  
+  def ite: Parser[Ite] = ("if" ~> expr) ~ ("then" ~> expr) ~ ("else" ~> expr) ^^ {
+    case c ~ t ~ e => Ite(c,t,e)
+  }
   
   def expr: Parser[Expr] = faccess | bexpr
   

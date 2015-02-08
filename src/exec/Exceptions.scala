@@ -11,7 +11,9 @@ object Exceptions {
     if (!e) throw new ExecException("Invariant checking error")
   }
   
-  class AbsTypeBuildException[S <: Stage](typ: S# Typ) extends ExecException(s"Trying to build an abstract type: $typ")
+  class AbsTypeBuildEE[S <: Stage](typ: S# Typ) extends ExecException(s"Trying to build an abstract type: $typ")
+  
+  class IfCondEE(p: Memory.Ptr) extends ExecException(s"If expression with non-integer condition: $p")
   
 }
 
