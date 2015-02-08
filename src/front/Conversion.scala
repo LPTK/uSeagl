@@ -13,7 +13,7 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   import collection.mutable.HashMap
   import b._
   
-  /** Polymorphic types */
+  /** Polymorphic definitions */
   
   def typs(x: a.TypSym): b.TypSym
   def funs(x: a.FunSym): b.FunSym
@@ -33,6 +33,7 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
     case a.Ite(c,t,e) => Ite(terms(c),terms(t),terms(e))
     case a.NilExpr => NilExpr
     case a.FieldAccess(e, id) => FieldAccess(terms(e), id)
+    case a.FieldAssign(e, id, v) => FieldAssign(terms(e), id, terms(v))
   }
   
   def apply(x: a.Fun): Fun =
@@ -48,7 +49,7 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   def apply(x: a.ConcTyp): ConcTyp = ConcTyp(x.nam, x.typs, x.regs, x.params map apply)
   def apply(x: a.AbsTyp): AbsTyp = AbsTyp(x.nam, x.typs, x.regs)
   
-  def apply(x: a.Var): Var = ???
+//  def apply(x: a.Var): Var = ???
   
   def apply(x: a.Stmt): Stmt = x match {
     case x: a.Expr => apply(x)

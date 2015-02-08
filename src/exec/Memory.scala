@@ -64,6 +64,9 @@ object Memory {
       OwnPtr(addr)
     }
     
+    def dealloc(ptrs: collection.Traversable[Ptr]) {
+      ptrs foreach dealloc
+    }
     def dealloc(ptr: Ptr): Unit = ptr match {
       case OwnPtr(a) => dealloc(a)
       case _ =>

@@ -6,6 +6,8 @@ import Memory._
 import common._
 import util._
 import front._
+//import collection._
+import Predef.{any2stringadd => _, _}
   
 //object Exec {
 //  import collection.mutable._
@@ -18,7 +20,9 @@ import front._
 class Exec {
   import Stages.Resolved._
   import collection.mutable.HashMap
+  import collection.mutable.HashSet
 //  import collection.mutable._
+  import collection.Set
   
   type Gamma = Map[VId,Ptr]
   
@@ -26,28 +30,35 @@ class Exec {
   
   def apply(e: Expr, g: Gamma = Map()) = {
     
-    def ref(p: Ptr) = p match {
+    def ref(p: Ptr) = (p match {
       case OwnPtr(a) => RefPtr(a)
       case _ => p
-    }
-    def mkUnit = h.alloc(Obj.empty)
+    }) //and println
+    def mkUnit = (h.alloc(Obj.empty), E[OwnPtr])
     
-    def rec(e: Expr)(implicit g: Gamma): Ptr = e match {
+    def E[T] = Set[T]()
+    
+    implicit class Tmp(val x: (Ptr,Set[OwnPtr])) {
+      def + (tmp: Set[OwnPtr]) = (x._1, x._2 ++ tmp)
+    }
+    
+    /** returns the result value and temporaries to be deallocated */
+    def rec(e: Expr)(implicit g: Gamma): (Ptr,Set[OwnPtr]) = e match {
       
-      case NilExpr => Nil
+      case NilExpr => (Nil,E)
       
-      case IntLit(n) => IntVal(n)
+      case IntLit(n) => (IntVal(n),E)
 //      case BoolLit(b) => BoolVal(b)
       
       case Ite(c,t,e) =>
-        val cp = rec(c)
+        val (cp,tmp) = rec(c)
         cp match {
-          case IntVal(0) => rec(e)
-          case IntVal(_) => rec(t)
+          case IntVal(0) => rec(e) + tmp
+          case IntVal(_) => rec(t) + tmp
           case _ => throw new IfCondEE(cp)
         }
       
-      case Var(s) => ref(g(s.nam)) // TODO handle not in ctx
+      case Var(s) => (ref(g(s.nam)), E) // TODO handle not in ctx
 //      case Build(typ, args) => h.alloc(Obj(
 //          typ.t.params.z map {p => }
 //        ))
@@ -62,62 +73,79 @@ class Exec {
           
   //        val fs = for (i <- 0 until par.size; id = par(i).nam; valu = rec(args(i)))
   //          yield id -> valu;
-          val fs = for (i <- 0 until par.size)
-            yield par(i).nam -> rec(args(i));
+          val tmps = HashSet[OwnPtr]()
+          val fs = for (i <- 0 until par.size; (valu,tmp) = rec(args(i)))
+            yield par(i).nam -> valu oh_and (tmps ++= tmp)
           
   //        h.alloc(Obj(HashMap(fs.toArray: _*)))
   //        h.alloc(Obj(HashMap(fs.toMap)))
-          h.alloc(Obj(HashMap(fs:_*)))
+          (h.alloc(Obj(HashMap(fs:_*))), tmps)
         case t: AbsTyp => throw new AbsTypeBuildEE(t)
       }
       
       case FCall(f, _, _, args) =>
         val par = f.params
-        val g2 = for (i <- 0 until par.size)
-          yield par(i).nam -> rec(args(i));
-        rec(f.body)(g2 toMap)
+        val tmps = HashSet[OwnPtr]()
+        val g2 = for (i <- 0 until par.size; (valu,tmp) = rec(args(i)))
+          yield par(i).nam -> valu oh_and (tmps ++= tmp)
+        rec(f.body)(g2 toMap) + tmps
       
       case FieldAccess(obj, id) =>
-        val ptr = rec(obj)
+        val (ptr,tmp) = rec(obj)
         ptr match {
-          case Ptr(a) => ref(h(a)(id))
-          case Nil => Nil
+          case Ptr(a) => (ref(h(a)(id)), tmp)
+          case Nil => (Nil, tmp)
+          case _ => throw new FieldAccessEE(ptr)
         }
         
       case FieldAssign(obj, id, value) =>
-        val ptr = rec(obj)
-        val v = rec(value)
+        val (ptr,tmp) = rec(obj)
+        val (v,tmp2) = rec(value)
         ptr match {
           case Ptr(a) =>
             h(a)(id) = v
-            mkUnit
-          case Nil => mkUnit
+            mkUnit + tmp + tmp2
+          case Nil => mkUnit + tmp + tmp2
+          case _ => throw new FieldAccessEE(ptr)
         }
         
       case Take(obj, id) =>
-        val ptr = rec(obj)
+        val (ptr,tmp) = rec(obj)
         ptr match {
           case Ptr(a) =>
             val r = h(a)(id) // TODO warn if taking a ref?
             h(a)(id) = Nil
-            r
-          case Nil => Nil
+            (r,tmp)
+          case Nil => (Nil, tmp)
         }
         
+      /** At block exit, every (local) temporary is deallocated, as well as intermediate exprs */
       case Block(stmts, e) => stmts match {
-        case Seq(Binding(id,e), rest @ _*) =>
-          val p = rec(e)
-          rec(Block(rest, e))(g + (id -> p))
+        case Seq(Binding(id,e2), rest @ _*) =>
+          val (p,t) = rec(e2)
+          val (p2,t2) = rec(Block(rest, e))(g + (id -> p)) + t
+          h.dealloc(p)
+          t2 foreach h.dealloc
+          (p2,E)
         case Seq(ex: Expr, rest @ _*) =>
-          rec(ex)
-          rec(Block(rest, e))
-        case Seq() => rec(e)
+          val (p,t) = rec(ex)
+          val (p2,t2) = rec(Block(rest, e))
+          h.dealloc(p)
+          t2 foreach h.dealloc
+          (p2,E)
+        case Seq() =>
+          val (p,t) = rec(e)
+          t foreach h.dealloc
+//          println(g,e)
+          (p,E)
       }
       
     }
     
-//    println(g)
-    rec(e)(g)
+//    println(e)
+    val (ptr,tmp) = rec(e)(g)
+    h.dealloc(tmp)
+    ptr
   }
   
   def dispVal(v: Ptr, done: Set[Ptr] = Set()): Str = {

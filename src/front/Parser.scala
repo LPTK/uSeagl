@@ -11,7 +11,7 @@ object Parser extends StandardTokenParsers with regex.RegParser {
 //  import RegParser._
   import Regions._
   
-  lexical.delimiters ++= List(".", "{", "}", ",", "=", ";", ":", "(", ")", "[", "]", "|", "=>", "->")
+  lexical.delimiters ++= List(".", "{", "}", ",", "=", ";", ":", "(", ")", "[", "]", "|", "=>", "->", "<-")
   lexical.reserved   ++= List("if", "then", "else", "fun", "typ", "nil", "new", "@read", "@inval", "@trans")
   
   def typ: Parser[ConcTyp] = "typ" ~> ident ~ (typList?) ~ (regList?) ~ (paramList?) ^^ {
@@ -113,11 +113,13 @@ object Parser extends StandardTokenParsers with regex.RegParser {
     case c ~ t ~ e => Ite(c,t,e)
   }
   
-  def expr: Parser[Expr] = faccess | bexpr
-  
   def fcall = ident ~ ("(" ~> repsep(expr,",") <~ ")") ^^ {
     case id ~ es => FCall(FId(id), None, None, es)
   }
+  
+  
+  def expr: Parser[Expr] = freass | faccess | bexpr
+  
   
 //  def faccess = expr ~ ("." ~> varname) ^^ {
 //    case e ~ vid => FieldAccess(e, vid)
@@ -127,6 +129,16 @@ object Parser extends StandardTokenParsers with regex.RegParser {
     case e ~ vid ~ vids =>
       vids.foldRight(FieldAccess(e, vid)){ case (id,e) => FieldAccess(e, id) }
   }
+  
+//  def freass: Parser[FieldAssign] = (bexpr <~ ".") ~ varname ~ ("<-" ~> expr) ^^ {
+//    case e ~ id ~ v => FieldAssign(e, id, v)
+//  }
+  def freass: Parser[FieldAssign] = (bexpr <~ ".") ~ varname ~ ("<-" ~> expr) ^^ {
+    case e ~ id ~ v => FieldAssign(e, id, v)
+  } | faccess ~ ("<-" ~> expr) ^^ {
+    case FieldAccess(e, id) ~ v => FieldAssign(e, id, v)
+  }
+  
   
   def varname: Parser[VId] = ident ^^ (VId.apply)
   

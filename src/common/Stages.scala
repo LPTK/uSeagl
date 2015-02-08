@@ -56,10 +56,26 @@ object Stages {
     def fname(s: FunSym) = s.value.nam.toString
   }
   
+  object Typed extends Stage {
+    import typing._
+    
+    type TypSym = Cyclic[Typ]
+    type FunSym = Cyclic[Fun]
+    type VarSym = Local
+    
+    type Term = Typd[Expr]
+    
+    def fname(s: FunSym) = s.value.nam.toString
+  }
   
   
   
 }
+
+
+
+
+
 
 
 
