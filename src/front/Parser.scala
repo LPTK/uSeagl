@@ -11,7 +11,7 @@ object Parser extends StandardTokenParsers with regex.RegParser {
 //  import RegParser._
   import Regions._
   
-  lexical.delimiters ++= List(".", "{", "}", ",", "=", ";", ":", "(", ")", "[", "]", "|", "=>", "->", "<-")
+  lexical.delimiters ++= List(".", "{", "}", ",", "=", ";", ":", "(", ")", "[", "]", "|", "=>", "->", "<-", "-")
   lexical.reserved   ++= List("if", "then", "else", "fun", "typ", "nil", "new", "@read", "@inval", "@trans")
   
   def typ: Parser[ConcTyp] = "typ" ~> ident ~ (typList?) ~ (regList?) ~ (paramList?) ^^ {
@@ -101,7 +101,10 @@ object Parser extends StandardTokenParsers with regex.RegParser {
     "(" ~ ")" ^^ {_ => Build(Type(TId("Unit"),Seq(),Seq()),Seq())}
   )
   
-  def int: Parser[Expr] = numericLit ^^ {s => IntLit(s.toInt)}
+  def int: Parser[Expr] = ("-"?) ~ numericLit ^^ {
+    case None ~ s => IntLit(s.toInt)
+    case Some(_) ~ s => IntLit(-s.toInt)
+  }
   
   def build: Parser[Build] = ("new" ~> typez) ~ (("(" ~> repsep(expr,",") <~ ")")?) ^^ {
     case t ~ es => Build(t, es getOrElse Seq())

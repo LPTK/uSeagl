@@ -13,6 +13,7 @@ import collection._
 object Unify {
    val singleStaged = SingleStaged(Typed)
 }
+/** TODO: what about ctrs overriden? a->X; a->Y */
 class Unify(val ty: Typing, unifs: Map[AbsTyp,Type]) extends singleStaged.Identity {
   
 //  override val funTable = ty.funTable
@@ -24,8 +25,8 @@ class Unify(val ty: Typing, unifs: Map[AbsTyp,Type]) extends singleStaged.Identi
 //    println(x, ty.typTable.values map (_ value))
     ty.typTable.values.find(_.value === x) get
 //    ty.allTypes(x)
-  }
-  override def getUnique(x: Fun) = ty.funTable.values.find(_.value === x) get
+  } //and println
+//  override def getUnique(x: Fun) = ty.funTable.values.find(_.value === x) get
   
   
   println(unifs)
@@ -39,7 +40,7 @@ class Unify(val ty: Typing, unifs: Map[AbsTyp,Type]) extends singleStaged.Identi
     unifsTrans += (k -> u(k))
 //    println(k, u(k))
     u = u mapValues apply
-    println(u)
+//    println(u)
   }
 //  println
 //  println(unifsTrans)

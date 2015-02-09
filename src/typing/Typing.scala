@@ -75,7 +75,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
           throw CompileError(s"Wrong number of arguments in function call $fc")
 //        r.asInstanceOf[FCall].retType
         val tfc: FCall = r.asInstanceOf[FCall]
-        tfc.args map (_ typ) zip (tfc.paramTypes) foreach (ctx += _) // { case(a,b) => a -> b } //{ _ -> _ }
+        tfc.args map (_.typ.valType) zip (tfc.paramTypes) foreach (ctx += _) // { case(a,b) => a -> b } //{ _ -> _ }
         tfc.retType
       case a.FieldAccess(e, id) => // TODO handle refs
         val FieldAccess(e, id) = r
@@ -171,7 +171,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
 //      cstrs += (tt._1.t.value -> tt._2.t.value)
 //    }
     def += (tt: (Type, Type)) {
-      println(tt)
+//      println(tt)
       tt match { // TODO: handle possible constraint cycles
   //      case (at: AbsTyp, ct: ConcTyp) =>
   //        cstrs += (at.t.value -> ct.t.value)
@@ -179,7 +179,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
           assert(targs1.size === 0)
           assert(rargs1.size === 0)
 //          if (cstrs isDefinedAt at)
-//            cstrs += t2 -> cstrs(at)
+//            cstrs += t2 -> cstrs(at)  
 //          val t22 = cstrs.collectFirst{ case(`at`, t) => t }
 //          t22 map (t => cstrs += (t2 -> t))
 //          cstrs.collect{ case(`at`, t) => +=(t2 -> t) }
@@ -299,7 +299,11 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
     
     def paramTypes =
       if (f.wasComputerYet) f.params map (_ typ) map transType
-      else f.params map (_ => ctx.mkAbsType)
+//      else f.params map (_ => ctx.mkAbsType)
+      else {
+        val af = funTable.collectFirst{case (af,`f`) => af}.get
+        af.params map (_ => ctx.mkAbsType)
+      }
     
   }
   implicit class TBuild(self: Build) extends Inst {

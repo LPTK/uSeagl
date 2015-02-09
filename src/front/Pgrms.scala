@@ -23,7 +23,7 @@ object VId { def apply(str: Str) = new VId(Sym(str)) }
 trait Pgrms {
 self: Stage =>
   
-  val dispIds = true
+  val dispIds = false
   
 //  type Id = Sym
 //  case class Id(sym: Sym) {
