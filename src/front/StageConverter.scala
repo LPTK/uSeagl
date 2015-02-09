@@ -7,11 +7,21 @@ import Specs._
 import Proxy._
 import scala.util.{Try, Success, Failure}
 import common.Reporting
+import collection.mutable.ArrayBuffer
 
 
 abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   import collection.mutable.HashMap
   import b._
+  
+  val delayedChecks = ArrayBuffer[()=>Unit]()
+  def delayCheck(ch: => Unit) = delayedChecks += (() => ch)
+  def flushChecks {
+//    println("flush...")
+    val chks = delayedChecks.clone
+    delayedChecks.clear
+    chks foreach (_ apply)
+  }
   
   /** Polymorphic definitions */
   
@@ -91,25 +101,26 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   def mkUnique(k: a.Fun): Cyclic[Fun] = {
 //    println(s"cf ${funs isDefinedAt k}  ${k}")
     if (funTable isDefinedAt k) funTable(k)
-    else new Cyclic[Fun]({
+    else fctComputed(new Cyclic[Fun]({
       cf =>
         funTable += ((k -> cf))
         delegate(k)
-    })
+    })) //oh_and flushChecks
   }
   def mkUnique(k: a.Typ): Cyclic[Typ] = {
 //    println(s"cf ${typs isDefinedAt k}  ${k}")
     if (typTable isDefinedAt k) typTable(k)
     else new Cyclic[Typ]({
       cf =>
+//        println(s"making $k")
         typTable += ((k -> cf))
-        delegate(k)
-    })
+        delegate(k) //oh_and println(s"made $k")
+    }) //oh_and flushChecks
   } //oh_and println(s"$b >> ${k.id} $k")
 //  def mkVar(k: a.Local): Local =
 //    if (vars isDefinedAt k) vars(k)
 //    else apply(k)
-  
+  def fctComputed(f: Cyclic[Fun]) = f
   
   /** Builtins */
   

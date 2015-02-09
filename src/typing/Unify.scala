@@ -36,7 +36,7 @@ class Unify(unifs: Map[AbsTyp,Type]) extends singleStaged.Identity {
     case at: AbsTyp if unifsTrans isDefinedAt at => unifsTrans(at)
     case _ => super.apply(x)
   }) //and println
-  override def tspec(x: TypeSpec) = Lazy(apply(x.get))
+  override def tspec(x: TypeSpec) = apply(x) // Lazy(apply(x.get))
   override def tparam(x: TypeParam) = apply(x)
   
   override def typs(x: TypSym) = mkUnique(x)

@@ -14,7 +14,7 @@ self: Stage =>
       case Binding(nam, valu) => s"$nam = $valu"
       case Var(s) => s"${vname(s)}"
       case FCall(f, targs, rargs, args) =>
-        fname(f) + mkTyps(targs) + mkRegs(rargs) + mkArgs(args) //s"${fname(f)}${mkArgs}"
+        fname(f) + mkTyps(targs) + mkRegs(rargs) + mkArgs(args,true) //s"${fname(f)}${mkArgs}"
       case Build(typ, args) =>
         "new " + typ + mkArgs(args) //s"${fname(f)}${mkArgs}"
       case Block(stmts, ret) => s"{${stmts map (_.toString+"; ")}$ret}"

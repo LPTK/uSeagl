@@ -103,7 +103,7 @@ object Stages {
     
     type Term = Typd[Expr]
     
-    type TypeSpec = Lazy[Type]
+    type TypeSpec = Type
 //    
 //    def fname(s: FunSym) = s.value.nam.toString
 //    def tname(s: TypSym) = s.value.nam.toString

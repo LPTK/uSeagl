@@ -35,13 +35,13 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
     val t = x match {
       case a.NilExpr => ctx.mkAbsType
       case a.IntLit(n) => IntType
-      case a.Var(vs) => ref(apply(vs).typ.get, vs.nam) // TODO MAKE REF
+      case a.Var(vs) => ref(apply(vs).typ, vs.nam) // TODO MAKE REF
       case a.Block(s,e) => c[Block](r).ret.typ //terms(e).typ
       case a.Ite(c,t,e) =>
 //        val ct = terms(c).typ
 //        if (ct != IntType) throw TypeMismatch(ct, IntType)
         val Ite(c,t,e) = r
-        ctx += (c.typ -> IntType)
+        ctx += (c.typ.valType -> IntType)
         val tt = t.typ
         ctx += (tt -> e.typ)
         tt
@@ -78,7 +78,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
   }
   
 //  def tspec(x: a.TypeSpec) = wtf // will be dealt for directly
-  def tspec(x: a.TypeSpec) = Lazy(x map apply getOrElse ctx.mkAbsType)
+  def tspec(x: a.TypeSpec) = x map apply getOrElse ctx.mkAbsType
   def tparam(x: a.TypeParam) = mkUnique(x).value.asInstanceOf[AbsTyp] // TODO make cleaner
   
   
@@ -100,12 +100,25 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
 //    println(s"Typ: $t")
 //    println(t, t.typs.size)
     
-    if (x.targs.size > t.typs.size) throw CompileError(s"Too many type arguments in $x")
+//    ctx.delayCheck {
+//      if (x.targs.size > t.typs.size) throw CompileError(s"Too many type arguments in $x")
+//    }
     
 //    else if (x.targs.size < t.typs.size)
+    
     val targs = (x.targs map apply) ++ (
+      if (t.wasComputerYet)
         for{i <- 0 until (t.typs.size - x.targs.size)} yield ctx.mkAbsType
+      else Seq()
     )
+    
+//    println(s"delaying $targs $t")
+    delayCheck {
+//      println(targs, t.typs)
+      if (targs.size != t.typs.size)
+        throw CompileError(s"Wrong number of type arguments in $x of type $t")
+    }
+    
     Type(t, targs, x.rargs)
   }
   
@@ -113,12 +126,23 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
     pushCtx
     val r = super.delegate(x)
 //    val cstrs = ctx.cstrs
-    ctx += (r.ret.get, r.body.typ)
+    ctx += (r.ret, r.body.typ)
 //    println(ctx.cstrs toMap)
-    new Unify(ctx.cstrs toMap)(r) oh_and popCtx
+//    new Unify(ctx.cstrs toMap)(r) oh_and {popCtx; flushChecks}
+    r
+  }
+  override def fctComputed(x: Cyclic[Fun]) = {
+    new Unify(ctx.cstrs toMap).mkUnique(x) oh_and {popCtx; flushChecks}
   }
   
-  
+////  override def delegate(x: a.Typ) = {
+////    super.delegate(x) oh_and flushChecks
+////  }
+//  override def mkUnique(x: a.Typ) =
+//    super.mkUnique(x) oh_and (if (typTable(x).wasComputerYet) flushChecks)
+//  
+//  override def mkUnique(x: a.Fun) =
+//    super.mkUnique(x) oh_and flushChecks
   
   
   case class Ctx (
@@ -162,6 +186,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
 //        cstrs += (t1 -> t2)
 //    }
     
+    
     val absTyps = ArrayBuffer[AbsTyp]()
     def mkAbsType =
       Type(new Cyclic(AbsTyp(ctx.nextId, Seq(), Seq(), false) and (absTyps += _)), Seq(), Seq())
@@ -174,12 +199,14 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
   }
   private var ctx = Ctx(ArrayBuffer(), None)
   def pushCtx = ctx = Ctx(ArrayBuffer(), Some(ctx))
-  def popCtx = ctx = ctx.parent.get
+  def popCtx = {
+//    ctx.delayedChecks foreach (_ apply)
+    ctx = ctx.parent.get
+  }
   
   object TType {
     def unapply(typ: Type) = Some(typ.t.value, typ.targs, typ.rargs)
   }
-  
   
   
 //  def typeUnify(e: a.Expr) = {  // typeContained
@@ -231,8 +258,9 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
     def rargs = self.rargs
     def parmzd = f.value
     
-    def retType = transType(f.ret.get)
-    
+    def retType =
+      if (f.wasComputerYet) transType(f.ret)
+      else ctx.mkAbsType
   }
   implicit class TBuild(self: Build) extends Inst {
     import self._
@@ -279,7 +307,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
 //    }
     def fieldType(id: VId) = t.value match {
       case t: ConcTyp =>
-        t.getField(id) map (l => transType(l.typ.get)) getOrElse
+        t.getField(id) map (l => transType(l.typ)) getOrElse
         (throw CompileError(s"Type $self does not have field $id"))
       case _ => wtf
     }

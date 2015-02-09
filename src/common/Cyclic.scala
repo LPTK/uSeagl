@@ -4,14 +4,16 @@ case class CyclicDependency() extends Exception("Illegal cyclic access")
 
 //class Cyclic[+T](expr: Cyclic[T] => T, toStr: T => String = ((_:T) => "[Cyclic value]")) extends Unique {
 class Cyclic[+T](expr: Cyclic[T] => T, toStr: T => String = ((t:T) => t.toString)) extends Unique {
+  def this(x: T) = this(_ => x)
+  
   private val _value = expr(this)
   def value =
-    if (_value == null) throw CyclicDependency()
+    if (!wasComputerYet) throw CyclicDependency()
     else _value
   
 //  def map(f: T => T) = 
     
-  def this(x: T) = this(_ => x)
+  def wasComputerYet = _value != null
   
   override def toString =
     if (_value == null) "[Cyclic in resolution]"

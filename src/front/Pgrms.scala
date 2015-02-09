@@ -86,7 +86,7 @@ self: Stage =>
   case class Type(t: TypSym, targs: Seq[Type], rargs: Seq[Reg]) {
 //    def parmzd = t
     
-    override def toString = tname(t) + mkTyps(targs) + mkArgs(rargs)
+    override def toString = tname(t) + mkTyps(targs) + mkRegs(rargs)
   }
 //  object Type {
 //    def unapply()

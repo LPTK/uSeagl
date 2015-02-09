@@ -62,4 +62,15 @@ a.tail.head
 
 
 
+typ List(head, tail: List)
+
+typ List(head, tail: List[Ref])
+
+typ List[T](head, tail: List[T])
+
+typ List[T](head, tail: List[Int])
+
+
+fun lol(x) = lol(x)
+fun lol = lol()
 

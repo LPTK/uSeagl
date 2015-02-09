@@ -59,7 +59,10 @@ object REPL extends App {
         println(t)
         
       case Success(typ: Typ, _) =>
-        println(ty(rs(ps(typ))))
+//        println(ty(rs(ps(typ))))
+        val t = ty(rs(ps(typ)))
+        ty.flushChecks
+        println(t)
       
       case Success(e: Expr, _) =>
         val re = rs(ps(e))
