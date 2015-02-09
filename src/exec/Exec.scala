@@ -54,6 +54,14 @@ class Exec {
       case IntLit(n) => (IntVal(n),E)
 //      case BoolLit(b) => BoolVal(b)
       
+      case IntOp(lhs,rhs,op) =>
+        val (v1,t1) = rec(lhs)
+        val (v2,t2) = rec(rhs)
+        (v1,v2) match {
+          case (IntVal(l),IntVal(r)) => (IntVal(op(l,r)), t1 ++ t2)
+          case _ => throw ExecException(s"Illegal operands for integer peration: $v1, $v2")
+        }
+      
       case Ite(c,t,e) =>
         val (cp,tmp) = rec(c)
         cp match {

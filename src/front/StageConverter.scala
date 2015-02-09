@@ -39,6 +39,7 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   def apply(x: a.Expr): Expr = x match {
     case a.NilExpr => NilExpr
     case a.IntLit(n) => IntLit(n)
+    case a.IntOp(a,b,o) => IntOp(terms(a),terms(b),o)
     case a.Var(vs) => Var(vars(vs))
     case a.Block(s,e) => Block(s map apply, terms(e))
     case a.Ite(c,t,e) => Ite(terms(c),terms(t),terms(e))
@@ -51,7 +52,7 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   final def apply(x: a.Fun): Fun =
 //    funTable getOrElse (x, mkUnique(x))
     if (funTable isDefinedAt x) funTable(x)
-    else mkUnique(x)
+    else getUnique(x)
   def delegate(x: a.Fun): Fun =
     Fun(x.nam, x.typs map tparam, x.regs, x.params map apply, tspec(x.ret), Spec.empty, terms(x.body)) 
   
@@ -59,7 +60,7 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   
   final def apply(x: a.Typ): Typ =
     if (typTable isDefinedAt x) typTable(x)
-    else mkUnique(x)
+    else getUnique(x)
   def delegate(x: a.Typ): Typ = x match {
 //    case x: a.ConcTyp => ConcTyp(x.nam, x.typs, x.regs, x.params map apply)
 //    case x: a.AbsTyp => AbsTyp(x.nam, x.typs, x.regs)
@@ -98,16 +99,16 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
 //  def apply(x: Cyclic[a.Fun]): Cyclic[Fun] = mkCycle(x.value)
 //  def apply(x: Cyclic[a.Typ]): Cyclic[Typ] = mkCycle(x.value)
   
-  def mkUnique(k: a.Fun): Cyclic[Fun] = {
+  def getUnique(k: a.Fun): Cyclic[Fun] = {
 //    println(s"cf ${funs isDefinedAt k}  ${k}")
     if (funTable isDefinedAt k) funTable(k)
-    else fctComputed(new Cyclic[Fun]({
+    else fctComputed(k, new Cyclic[Fun]({
       cf =>
         funTable += ((k -> cf))
         delegate(k)
     })) //oh_and flushChecks
   }
-  def mkUnique(k: a.Typ): Cyclic[Typ] = {
+  def getUnique(k: a.Typ): Cyclic[Typ] = {
 //    println(s"cf ${typs isDefinedAt k}  ${k}")
     if (typTable isDefinedAt k) typTable(k)
     else new Cyclic[Typ]({
@@ -120,7 +121,7 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
 //  def mkVar(k: a.Local): Local =
 //    if (vars isDefinedAt k) vars(k)
 //    else apply(k)
-  def fctComputed(f: Cyclic[Fun]) = f
+  def fctComputed(k: a.Fun, f: Cyclic[Fun]) = f
   
   /** Builtins */
   
@@ -207,6 +208,7 @@ class Presolve extends StageConverter(Ast, Resolving) {
   Builtins.btyps foreach apply
   
   val btyps = Builtins.btyps map apply
+  val bfuns = Builtins.bfuns map apply
   
 //  def ult[T](e: => T) = Lazy(Try(e).transform(x=>Try(x), {
 //    case e: java.util.NoSuchElementException => Failure(IdentifierNotFound(null))
@@ -261,17 +263,18 @@ class Presolve extends StageConverter(Ast, Resolving) {
 class Resolve(ps: Presolve) extends StageConverter(Resolving, Resolved) {
   import b._
   
-  val btyps = ps.btyps map mkUnique // apply
+  val btyps = ps.btyps map getUnique // apply
+  val bfuns = ps.bfuns map getUnique
   
-  def typs(x: a.TypSym) = mkUnique(x.get) //apply(x.get) //x.get flatMap apply
-  def funs(x: a.FunSym) = mkUnique(x.get)
+  def typs(x: a.TypSym) = getUnique(x.get) //apply(x.get) //x.get flatMap apply
+  def funs(x: a.FunSym) = getUnique(x.get)
 //    Lazy(apply(x.get))
 //    apply(new Cyclic[a.Fun](_ => x.get))
   def vars(x: a.VarSym) = apply(x.get) //apply(x.get) //x.get flatMap apply
   def terms(x: a.Term)  = apply(x)
   
   def tspec(x: a.TypeSpec) = x map apply
-  def tparam(x: a.TypeParam) = mkUnique(x).value.asInstanceOf[AbsTyp] // TODO make cleaner // apply(x)
+  def tparam(x: a.TypeParam) = getUnique(x).value.asInstanceOf[AbsTyp] // TODO make cleaner // apply(x)
   
   
   

@@ -19,6 +19,7 @@ self: Stage =>
         "new " + typ + mkArgs(args) //s"${fname(f)}${mkArgs}"
       case Block(stmts, ret) => s"{${stmts map (_.toString+"; ")}$ret}"
       case IntLit(n) => n.toString
+      case IntOp(a, b, op) => s"[iop]($a,$b)"
       case Ite(c,t,e) => s"if $c then $t else $e"
       case NilExpr => s"nil"
       case FieldAccess(obj, id) => s"$obj.$id"
@@ -43,6 +44,7 @@ self: Stage =>
   case class Block(stmts: Seq[Stmt], ret: Term) extends BasicExpr
   
   case class IntLit(value: Int) extends BasicExpr
+  case class IntOp(lhs: Term, rhs: Term, op: (Int, Int) => Int) extends BasicExpr
   
 //  case class BoolLit(value: Bool) extends BasicExpr
   

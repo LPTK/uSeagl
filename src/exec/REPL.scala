@@ -26,23 +26,34 @@ object REPL extends App {
     
     print("> ")
     
-    val t = phrase(toplevel)(new lexical.Scanner(readLine))
+    val t = phrase(repl)(new lexical.Scanner(readLine))
     
 //    println(t)
     
     try { t match {
       // Commands:
-      case Success(Var(VId('exit)), _) =>
-        System.exit(0)
-        
-      case Success(Var(VId('ctx)), _) =>
-        println(ctx)
-        println("Types:\n  " + ty.typTable.values.mkString("\n  "))
-        println("Funs:\n  " + ty.funTable.values.mkString("\n  "))
-        
-      case Success(Var(VId('h)), _) if !(ctx isDefinedAt VId('h)) =>
-        println(ex.h)
-        
+//      case Success(Var(VId('exit)), _) =>
+//        System.exit(0)
+//        
+//      case Success(Var(VId('ctx)), _) =>
+//        println(ctx)
+//        println("Types:\n  " + ty.typTable.values.mkString("\n  "))
+//        println("Funs:\n  " + ty.funTable.values.mkString("\n  "))
+//        
+//      case Success(Var(VId('h)), _) if !(ctx isDefinedAt VId('h)) =>
+//        println(ex.h)
+      case Success(Command(c), _) => c match {
+        case "e" =>
+          System.exit(0)
+        case "h" =>
+          println(ex.h)
+        case "c" =>
+          println(ctx)
+          println("Types:\n  " + ty.typTable.values.mkString("\n  "))
+          println("Funs:\n  " + ty.funTable.values.mkString("\n  "))
+        case _ => println(s"Unknown command :$c")
+      }
+      
       case Success(IntLit(42), _) =>
         while(true) ()
         
@@ -67,7 +78,8 @@ object REPL extends App {
       case Success(e: Expr, _) =>
         val re = rs(ps(e))
 //        println("Typed: " + ty.terms(re))
-        println("Typed: " + ty.typeUnify(re))
+        val te = ty.typeUnify(re)
+        println("Typed: " + te.typ)
         val r = ex(re, ctx toMap)
         println(ex.h.dispVal(r))
         ex.h.dealloc(r)

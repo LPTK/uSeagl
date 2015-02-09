@@ -74,3 +74,11 @@ typ List[T](head, tail: List[Int])
 fun lol(x) = lol(x)
 fun lol = lol()
 
+
+fun lol(x) = if x then 0 else lol(x)
+
+
+add(1,2)
+
+
+

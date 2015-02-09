@@ -23,6 +23,8 @@ object VId { def apply(str: Str) = new VId(Sym(str)) }
 trait Pgrms {
 self: Stage =>
   
+  val dispIds = true
+  
 //  type Id = Sym
 //  case class Id(sym: Sym) {
 //    override def toString = sym match { case Symbol(str) => str }
@@ -64,14 +66,18 @@ self: Stage =>
     val typs: Seq[TypeParam] // Seq[TId]
     val regs: Seq[VId]
     
-    override def toString = this match {
+    def namStr = if (dispIds) s"[$id]$nam" else nam.toString
+    
+    override def toString =
+    (if (dispIds) s"[$id]" else "") +
+    (this match {
       case ConcTyp(nam, typs, regs, params) =>
 //        s"$nam[${typs mkString ", "}]{${regs mkString ", "}}(${params mkString ", "})"
         "typ " + nam + mkTyps(typs map tpname) + mkRegs(regs) + mkArgs(params)
       case AbsTyp(nam, typs, regs, ud) =>
 //        s"$nam[${typs mkString ", "}]{${regs mkString ", "}}=?"
         "" + nam + mkTyps(typs) + mkRegs(regs) + "=?"
-    }
+    })
   }
   
   case class ConcTyp(nam: TId, typs: Seq[TypeParam], regs: Seq[VId], params: Seq[Local]) extends Decl with Typ {

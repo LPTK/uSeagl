@@ -13,9 +13,22 @@ import collection._
 object Unify {
    val singleStaged = SingleStaged(Typed)
 }
-class Unify(unifs: Map[AbsTyp,Type]) extends singleStaged.Identity {
+class Unify(val ty: Typing, unifs: Map[AbsTyp,Type]) extends singleStaged.Identity {
   
-//  println(unifs)
+//  override val funTable = ty.funTable
+//  val typTable = HashMap[a.Typ, Cyclic[Typ]]()
+//  val varTable = HashMap[a.Local, Local]()
+  
+//  override def getUnique(x: Typ) = ty.typTable.find(_ == x)
+  override def getUnique(x: Typ) = {
+//    println(x, ty.typTable.values map (_ value))
+    ty.typTable.values.find(_.value === x) get
+//    ty.allTypes(x)
+  }
+  override def getUnique(x: Fun) = ty.funTable.values.find(_.value === x) get
+  
+  
+  println(unifs)
   
   var u = unifs
   
@@ -26,7 +39,7 @@ class Unify(unifs: Map[AbsTyp,Type]) extends singleStaged.Identity {
     unifsTrans += (k -> u(k))
 //    println(k, u(k))
     u = u mapValues apply
-//    println(u)
+    println(u)
   }
 //  println
 //  println(unifsTrans)
@@ -39,8 +52,8 @@ class Unify(unifs: Map[AbsTyp,Type]) extends singleStaged.Identity {
   override def tspec(x: TypeSpec) = apply(x) // Lazy(apply(x.get))
   override def tparam(x: TypeParam) = apply(x)
   
-  override def typs(x: TypSym) = mkUnique(x)
-  override def funs(x: FunSym) = mkUnique(x)
+  override def typs(x: TypSym) = getUnique(x)
+  override def funs(x: FunSym) = getUnique(x)
   override def vars(x: a.VarSym) = apply(x)
   override def terms(x: Term) = Typd(apply(x.obj), apply(x.typ))
   

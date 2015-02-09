@@ -11,11 +11,15 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
   import b._
   import collection._
   import mutable.ArrayBuffer
+  import mutable.HashMap
   
 //  val btypsc = rs.btyps map mkCycle // apply
 //  val btyps = btypsc map (_ value)
 //  val btyps = rs.btyps map mkCycle // apply
-  val btyps = rs.btyps map (t => mkUnique(t.value)) // apply
+  val btyps = rs.btyps map (t => getUnique(t.value)) // apply
+  
+//  val allTyps = HashMap[Typ, Cyclic[Typ]]()
+  
   
 //  def btByName(nam: Sym) = new Cyclic(btyps.find { _.nam == TId(nam) } get)
   def btByName(nam: Sym) = (btyps.find { _.nam == TId(nam) } get)
@@ -24,9 +28,11 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
   val RefTyp = btByName('Ref)
   def RefType(typ: Type, reg: Reg) = Type(RefTyp, Seq(typ), Seq(reg))
   
+  val bfuns = rs.bfuns map (t => getUnique(t.value))
   
-  def typs(x: a.TypSym) = mkUnique(x.value)
-  def funs(x: a.FunSym) = mkUnique(x.value)
+  
+  def typs(x: a.TypSym) = getUnique(x.value)
+  def funs(x: a.FunSym) = getUnique(x.value)
   def vars(x: a.VarSym) = apply(x)
   
   def terms(x: a.Term) = { // TODO perform translations!
@@ -35,6 +41,11 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
     val t = x match {
       case a.NilExpr => ctx.mkAbsType
       case a.IntLit(n) => IntType
+      case a.IntOp(a,b,o) =>
+        val IntOp(a,b,o) = r
+        ctx += (a.typ.valType -> IntType)
+        ctx += (b.typ.valType -> IntType)
+        IntType
       case a.Var(vs) => ref(apply(vs).typ, vs.nam) // TODO MAKE REF
       case a.Block(s,e) => c[Block](r).ret.typ //terms(e).typ
       case a.Ite(c,t,e) =>
@@ -42,9 +53,10 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
 //        if (ct != IntType) throw TypeMismatch(ct, IntType)
         val Ite(c,t,e) = r
         ctx += (c.typ.valType -> IntType)
-        val tt = t.typ
-        ctx += (tt -> e.typ)
-        tt
+//        val tt = t.typ
+//        ctx += (tt -> e.typ)
+//        tt
+        ctx.leastUpperBound(t.typ, e.typ)
 //      case a.Build(t,a) => apply(t)
       case b: a.Build =>
 //        if (b.args.size != b.typ.t.value.fields.size)
@@ -61,7 +73,10 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
       case fc: a.FCall =>
         if (fc.args.size != fc.f.value.params.size)
           throw CompileError(s"Wrong number of arguments in function call $fc")
-        r.asInstanceOf[FCall].retType
+//        r.asInstanceOf[FCall].retType
+        val tfc: FCall = r.asInstanceOf[FCall]
+        tfc.args map (_ typ) zip (tfc.paramTypes) foreach (ctx += _) // { case(a,b) => a -> b } //{ _ -> _ }
+        tfc.retType
       case a.FieldAccess(e, id) => // TODO handle refs
         val FieldAccess(e, id) = r
         val typ = e.typ.valType
@@ -79,7 +94,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
   
 //  def tspec(x: a.TypeSpec) = wtf // will be dealt for directly
   def tspec(x: a.TypeSpec) = x map apply getOrElse ctx.mkAbsType
-  def tparam(x: a.TypeParam) = mkUnique(x).value.asInstanceOf[AbsTyp] // TODO make cleaner
+  def tparam(x: a.TypeParam) = getUnique(x).value.asInstanceOf[AbsTyp] // TODO make cleaner
   
   
   
@@ -131,8 +146,10 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
 //    new Unify(ctx.cstrs toMap)(r) oh_and {popCtx; flushChecks}
     r
   }
-  override def fctComputed(x: Cyclic[Fun]) = {
-    new Unify(ctx.cstrs toMap).mkUnique(x) oh_and {popCtx; flushChecks}
+  override def fctComputed(k: a.Fun, x: Cyclic[Fun]) = {
+//    println(s"comp ${new Unify(ctx.cstrs toMap).mkUnique(x)}")
+//    new Unify(ctx.cstrs toMap).mkUnique(x) oh_and {popCtx; flushChecks}
+    new Unify(this, ctx.cstrs toMap).getUnique(x) and {popCtx; flushChecks; funTable(k) = _}
   }
   
 ////  override def delegate(x: a.Typ) = {
@@ -154,13 +171,18 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
 //      cstrs += (tt._1.t.value -> tt._2.t.value)
 //    }
     def += (tt: (Type, Type)) {
-//      println(tt)
+      println(tt)
       tt match { // TODO: handle possible constraint cycles
   //      case (at: AbsTyp, ct: ConcTyp) =>
   //        cstrs += (at.t.value -> ct.t.value)
         case (TType(at:AbsTyp, targs1, rargs1), t2) =>
           assert(targs1.size === 0)
           assert(rargs1.size === 0)
+//          if (cstrs isDefinedAt at)
+//            cstrs += t2 -> cstrs(at)
+//          val t22 = cstrs.collectFirst{ case(`at`, t) => t }
+//          t22 map (t => cstrs += (t2 -> t))
+//          cstrs.collect{ case(`at`, t) => +=(t2 -> t) }
           cstrs += (at -> t2)
         
         case (_, TType(_:AbsTyp, _, _)) => +=(tt.swap)
@@ -172,6 +194,13 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
           (targs1 zip targs2) map += //(+=(_:Type,_:Type))
       }
     }
+    
+    def leastUpperBound(t1: Type, t2: Type): Type = (t1,t2) match {
+      case _ => t1 // TODO!!
+    }
+    
+    
+    
 //    def add (t1: Typ, t2: Typ): Unit = (t1,t2) match {
 //      case _ if t1 === t2 =>
 ////      case (_:ConcTyp, _:ConcTyp) => println(t1.id,t2.id,t1==t2)
@@ -188,8 +217,14 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
     
     
     val absTyps = ArrayBuffer[AbsTyp]()
-    def mkAbsType =
-      Type(new Cyclic(AbsTyp(ctx.nextId, Seq(), Seq(), false) and (absTyps += _)), Seq(), Seq())
+    def mkAbsType = {
+//      Type(new Cyclic(AbsTyp(ctx.nextId, Seq(), Seq(), false) and (absTyps += _)), Seq(), Seq())
+      val at = AbsTyp(ctx.nextId, Seq(), Seq(), false)
+      absTyps += at
+//      Type(new Cyclic(at) and (ct => allTyps += (at -> ct)), Seq(), Seq())
+      Type(new Cyclic(at) and (ct => typTable += (a.AbsTyp(at.nam, Seq(), Seq(), false) -> ct)), Seq(), Seq())
+      // ^ that's really ugly
+    }
     
     var absTypId = 0
     def nextId = {
@@ -261,6 +296,11 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
     def retType =
       if (f.wasComputerYet) transType(f.ret)
       else ctx.mkAbsType
+    
+    def paramTypes =
+      if (f.wasComputerYet) f.params map (_ typ) map transType
+      else f.params map (_ => ctx.mkAbsType)
+    
   }
   implicit class TBuild(self: Build) extends Inst {
     import self._

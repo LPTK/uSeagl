@@ -2,6 +2,7 @@ package front
 
 import common.Stage
 import common.Stages._
+import Specs._
 
 //case class Builtins[S <: Stage](s: S) {
 //case class Builtins[S <: Stage](s: S) {
@@ -17,7 +18,13 @@ object Builtins {
       ConcTyp(TId("Int"), Seq(), Seq(), Seq())
   )
   
+  val IntType = Type(TId("Int"), Seq(), Seq())
   
+  val bfuns = Seq(
+//      Fun(FId("add"), Seq(), Seq(), Seq(Local(VId("a"), IntType)), None, Spec.empty, ???)
+      Fun(FId("add"), Seq(), Seq(), Seq(Local(VId("a"), None), Local(VId("b"), None)), None, Spec.empty,
+          IntOp(Var(VId("a")),Var(VId("b")),{_ + _}))
+  )
 
 }
 
