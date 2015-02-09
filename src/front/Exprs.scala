@@ -16,7 +16,7 @@ self: Stage =>
       case FCall(f, targs, rargs, args) =>
         fname(f) + mkTyps(targs) + mkRegs(rargs) + mkArgs(args) //s"${fname(f)}${mkArgs}"
       case Build(typ, args) =>
-        (typ) + mkArgs(args) //s"${fname(f)}${mkArgs}"
+        "new " + typ + mkArgs(args) //s"${fname(f)}${mkArgs}"
       case Block(stmts, ret) => s"{${stmts map (_.toString+"; ")}$ret}"
       case IntLit(n) => n.toString
       case Ite(c,t,e) => s"if $c then $t else $e"

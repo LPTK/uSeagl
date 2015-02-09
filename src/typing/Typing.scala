@@ -12,11 +12,13 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
   import collection._
   import mutable.ArrayBuffer
   
-  val btypsc = rs.btyps map mkCycle // apply
-  val btyps = btypsc map (_ value)
+//  val btypsc = rs.btyps map mkCycle // apply
+//  val btyps = btypsc map (_ value)
+//  val btyps = rs.btyps map mkCycle // apply
+  val btyps = rs.btyps map (t => mkCycle(t.value)) // apply
   
 //  def btByName(nam: Sym) = new Cyclic(btyps.find { _.nam == TId(nam) } get)
-  def btByName(nam: Sym) = (btypsc.find { _.nam == TId(nam) } get)
+  def btByName(nam: Sym) = (btyps.find { _.nam == TId(nam) } get)
   
   val IntType = Type(btByName('Int), Seq(), Seq())
   val RefTyp = btByName('Ref)
@@ -28,26 +30,41 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
   def vars(x: a.VarSym) = apply(x)
   
   def terms(x: a.Term) = { // TODO perform translations!
+    def c[T](x: Any) = x.asInstanceOf[T]
     val r = super.apply(x)
     val t = x match {
       case a.NilExpr => ctx.mkAbsType
       case a.IntLit(n) => IntType
       case a.Var(vs) => ref(apply(vs).typ, vs.nam) // TODO MAKE REF
-      case a.Block(s,e) => terms(e).typ
+      case a.Block(s,e) => c[Block](r).ret.typ //terms(e).typ
       case a.Ite(c,t,e) =>
 //        val ct = terms(c).typ
 //        if (ct != IntType) throw TypeMismatch(ct, IntType)
-        ctx += (terms(c).typ -> IntType)
-        val tt = terms(t).typ
-        ctx += (tt -> terms(e).typ)
+        val Ite(c,t,e) = r
+        ctx += (c.typ -> IntType)
+        val tt = t.typ
+        ctx += (tt -> e.typ)
         tt
 //      case a.Build(t,a) => apply(t)
       case b: a.Build =>
-        apply(b).asInstanceOf[Build].retType // apply(t)
+//        if (b.args.size != b.typ.t.value.fields.size)
+        b.typ.t.value match {
+          case a.ConcTyp(_, _, _, fs) if b.args.size != fs.size =>
+            throw CompileError(s"Wrong number of arguments in object construction $b")
+          case at: a.AbsTyp => 
+            throw CompileError(s"Cannot construct abstract type $at")
+          case _ =>
+        }
+//        println(apply(b))
+        r.asInstanceOf[Build].retType // apply(t)
 //      case a.FCall(fs,ta,ra,a) => funs(fs).value.retType
-      case fc: a.FCall => apply(fc).asInstanceOf[FCall].retType
+      case fc: a.FCall =>
+        if (fc.args.size != fc.f.value.params.size)
+          throw CompileError(s"Wrong number of arguments in function call $fc")
+        r.asInstanceOf[FCall].retType
       case a.FieldAccess(e, id) => // TODO handle refs
-        val typ = terms(e).typ.valType
+        val FieldAccess(e, id) = r
+        val typ = e.typ.valType
 //        println(typ, id)
 //        println(terms(e).typ.t == RefTyp)
 //        terms(e).typ match { case Type(RefTyp,_,_) => }
@@ -88,44 +105,81 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
     Type(t, targs, x.rargs)
   }
   
-  
-  
+  override def apply(x: a.Fun) = {
+    pushCtx
+    val r = super.apply(x)
+//    val cstrs = ctx.cstrs
+    ctx += (r.ret, r.body.typ)
+//    println(ctx.cstrs toMap)
+    new Unify(ctx.cstrs toMap)(r) oh_and popCtx
+  }
   
   
   
   
   case class Ctx (
-      cstrs: ArrayBuffer[(Typ,Typ)],
+//      cstrs: ArrayBuffer[(Typ,Typ)],
+      cstrs: ArrayBuffer[(AbsTyp,Typ)],
       parent: Option[Ctx] )
   {
+//    def += (tt: (Type, Type)) {
+//      cstrs += (tt._1.t.value -> tt._2.t.value)
+//    }
     def += (tt: (Type, Type)) {
-      cstrs += (tt._1.t.value -> tt._2.t.value)
+//      println(tt)
+      tt match { // TODO: handle possible constraint cycles
+  //      case (at: AbsTyp, ct: ConcTyp) =>
+  //        cstrs += (at.t.value -> ct.t.value)
+        case (TType(t1, targs1, rargs1), TType(t2, targs2, rargs2)) =>
+          add(t1,t2)
+  //        (targs1 zip targs2) map (+=(_,_))
+          (targs1 zip targs2) map += //(+=(_:Type,_:Type))
+      }
     }
+    def add (t1: Typ, t2: Typ): Unit = (t1,t2) match {
+      case _ if t1 === t2 =>
+//      case (_:ConcTyp, _:ConcTyp) => println(t1.id,t2.id,t1==t2)
+      case (_:ConcTyp, _:ConcTyp) => throw UnificationError(t1,t2)
+      case (_:ConcTyp, _:AbsTyp) => add(t2,t1)
+//      case (t1:AbsTyp, t2:ConcTyp) => cstrs += (t1 -> t2)
+      case (t1:AbsTyp, _) =>
+////        for ((k,v) <- cstrs if v === t1)
+////          cstrs(k) = t1
+//        for (i <- 0 until cstrs.size if cstrs(i)._1 == t1)
+//          cstrs(i) = cstrs(i)._1 -> t2
+        cstrs += (t1 -> t2)
+    }
+    
     val absTyps = ArrayBuffer[AbsTyp]()
     def mkAbsType =
-      Type(new Cyclic(AbsTyp(ctx.nextId, Seq(), Seq()) and (absTyps += _)), Seq(), Seq())
+      Type(new Cyclic(AbsTyp(ctx.nextId, Seq(), Seq(), false) and (absTyps += _)), Seq(), Seq())
     
     var absTypId = 0
     def nextId = {
-      
       val letter = (absTypId % 26 + 'A').toChar
-      
       TId(s"'$letter" + (if (absTypId > 26) (absTypId/26) else ""))
-      
     } oh_and (absTypId += 1)
   }
   private var ctx = Ctx(ArrayBuffer(), None)
   def pushCtx = ctx = Ctx(ArrayBuffer(), Some(ctx))
   def popCtx = ctx = ctx.parent.get
   
+  object TType {
+    def unapply(typ: Type) = Some(typ.t.value, typ.targs, typ.rargs)
+  }
   
   
   
-  
-  def typeUnify(e: a.Expr) = {  // typeContained
-    pushCtx
-    terms(e)
-  } oh_and popCtx
+//  def typeUnify(e: a.Expr) = {  // typeContained
+//    pushCtx
+//    terms(e)
+//  } oh_and popCtx
+  def typeUnify(e: a.Expr) = {
+    val es = Seq()
+    val Fun(nam, typs, regs, params, ret, spec, body) =
+      apply(a.Fun(FId("[internal]"), es, es, es, None, Specs.Spec.empty, e))
+    body
+  }
   
   
   
@@ -171,8 +225,8 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
   implicit class TBuild(self: Build) extends Inst {
     import self._
     
-    def targs = self.targs
-    def rargs = self.rargs
+    def targs = typ.targs
+    def rargs = typ.rargs
     def parmzd = typ.t.value
     
     def retType = {
@@ -182,6 +236,9 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
 //        def rargs = self.rargs
 //        def parmzd = typ.t.value
 //      } transType typ
+//      self.args map (ctx += (_.typ -> ))
+      for (i <- 0 until args.size)
+        ctx += (args(i).typ -> targs(i))
       fromGenArgs
     }
     

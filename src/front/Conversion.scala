@@ -51,7 +51,7 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
     case _ => wtf
   }
   def apply(x: a.ConcTyp): ConcTyp = ConcTyp(x.nam, x.typs map tparam, x.regs, x.params map apply)
-  def apply(x: a.AbsTyp): AbsTyp = AbsTyp(x.nam, x.typs map tparam, x.regs)
+  def apply(x: a.AbsTyp): AbsTyp = AbsTyp(x.nam, x.typs map tparam, x.regs, x.userDefined)
   
 //  def apply(x: a.Var): Var = ???
   
@@ -98,7 +98,7 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
         typs += ((k -> cf))
         apply(k)
     })
-  }
+  } //oh_and println(s"$b >> ${k.id} $k")
 //  def mkVar(k: a.Local): Local =
 //    if (vars isDefinedAt k) vars(k)
 //    else apply(k)
@@ -106,17 +106,20 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   
   /** Builtins */
   
-  val btyps: Seq[Typ]
+//  val btyps: Seq[Typ]
 }
 
-case class SingleStaged(s: Stage) {
+//case class SingleStaged(s: Stage) {
+case class SingleStaged[S <: Stage](s: S) {
   abstract class Identity extends front.StageConverter[s.type,s.type](s, s) {
     
     def typs(x: a.TypSym) = x
     def funs(x: a.FunSym) = x
     def vars(x: a.VarSym) = x
+    def terms(x: a.Term) = x
     
     def tspec(x: a.TypeSpec) = x
+    def tparam(x: a.TypeParam) = x
     
   }
 }
@@ -201,7 +204,7 @@ class Presolve extends StageConverter(Ast, Resolving) {
   def terms(x: a.Term)  = apply(x)
   
   def tspec(x: a.TypeSpec) = x map apply
-  def tparam(x: a.TypeParam) = AbsTyp(x, Seq(), Seq()) and (ctx(x) = _)
+  def tparam(x: a.TypeParam) = AbsTyp(x, Seq(), Seq(), true) and (ctx(x) = _)
   
   
   override def apply(x: a.Fun) = { // TODO use and
@@ -216,7 +219,7 @@ class Presolve extends StageConverter(Ast, Resolving) {
     super.apply(x) and {popCtx; ctx(x.nam) = _}
   }
   override def apply(x: a.ConcTyp) =
-    super.apply(x) and (ctx(x.nam) = _)
+    { pushCtx; super.apply(x) } and { popCtx; ctx(x.nam) = _ }
 //  override def apply(x: a.ConcTyp) = {
 //    pushCtx
 //    x.typs foreach (p => ctx(p) = AbsTyp(p, Seq(), Seq()))
@@ -240,7 +243,7 @@ class Presolve extends StageConverter(Ast, Resolving) {
 class Resolve(ps: Presolve) extends StageConverter(Resolving, Resolved) {
   import b._
   
-  val btyps = ps.btyps map apply
+  val btyps = ps.btyps map mkCycle // apply
   
   def typs(x: a.TypSym) = mkCycle(x.get) //apply(x.get) //x.get flatMap apply
   def funs(x: a.FunSym) = mkCycle(x.get)

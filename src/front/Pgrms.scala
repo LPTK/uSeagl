@@ -67,10 +67,10 @@ self: Stage =>
     override def toString = this match {
       case ConcTyp(nam, typs, regs, params) =>
 //        s"$nam[${typs mkString ", "}]{${regs mkString ", "}}(${params mkString ", "})"
-        "typ " + nam + mkStr(typs map tpname,"[",", ","]",false) + mkStr(regs,"{",", ","}",false) + mkStr(params,"(",", ",")",false)
-      case AbsTyp(nam, typs, regs) =>
+        "typ " + nam + mkTyps(typs) + mkRegs(regs) + mkArgs(params)
+      case AbsTyp(nam, typs, regs, ud) =>
 //        s"$nam[${typs mkString ", "}]{${regs mkString ", "}}=?"
-        "" + nam + mkStr(typs map tpname,"[",", ","]",false) + mkStr(regs,"{",", ","}",false) + "=?"
+        "" + nam + mkTyps(typs) + mkRegs(regs) + "=?"
     }
   }
   
@@ -79,14 +79,14 @@ self: Stage =>
 //    def fieldType(id: VId) = (params.find (_.nam === id) get).typ // TODOne handle not here
   }
 
-  case class AbsTyp(nam: TId, typs: Seq[TypeParam], regs: Seq[VId]) extends Typ
+  case class AbsTyp(nam: TId, typs: Seq[TypeParam], regs: Seq[VId], userDefined: Bool) extends Typ
   
   
 //  case class Type(t: TypSym, targs: Opt[Seq[Type]], rargs: Opt[Seq[Reg]]) { // TODOne rm Opt
   case class Type(t: TypSym, targs: Seq[Type], rargs: Seq[Reg]) {
 //    def parmzd = t
     
-    override def toString = tname(t) + mkStr(targs,"[",", ","]",false) + mkStr(rargs,"{",", ","}",false)
+    override def toString = tname(t) + mkTyps(targs) + mkArgs(rargs)
   }
 //  object Type {
 //    def unapply()

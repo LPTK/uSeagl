@@ -103,8 +103,8 @@ object Parser extends StandardTokenParsers with regex.RegParser {
   
   def int: Parser[Expr] = numericLit ^^ {s => IntLit(s.toInt)}
   
-  def build: Parser[Build] = ("new" ~> typez) ~ ("(" ~> repsep(expr,",") <~ ")") ^^ {
-    case t ~ es => Build(t, es)
+  def build: Parser[Build] = ("new" ~> typez) ~ (("(" ~> repsep(expr,",") <~ ")")?) ^^ {
+    case t ~ es => Build(t, es getOrElse Seq())
   }
   
   def bexpr: Parser[Expr] = ("nil" ^^ (_ => NilExpr)) | ite | build | int | block | parblock | fcall | (varname ^^ (Var))

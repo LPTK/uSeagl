@@ -61,7 +61,8 @@ object REPL extends App {
       
       case Success(e: Expr, _) =>
         val re = rs(ps(e))
-        println("Typed: " + ty.terms(re))
+//        println("Typed: " + ty.terms(re))
+        println("Typed: " + ty.typeUnify(re))
         val r = ex(re, ctx toMap)
         println(ex.h.dispVal(r))
         ex.h.dealloc(r)
