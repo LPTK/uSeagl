@@ -35,7 +35,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
     val t = x match {
       case a.NilExpr => ctx.mkAbsType
       case a.IntLit(n) => IntType
-      case a.Var(vs) => ref(apply(vs).typ, vs.nam) // TODO MAKE REF
+      case a.Var(vs) => ref(apply(vs).typ.get, vs.nam) // TODO MAKE REF
       case a.Block(s,e) => c[Block](r).ret.typ //terms(e).typ
       case a.Ite(c,t,e) =>
 //        val ct = terms(c).typ
@@ -78,7 +78,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
   }
   
 //  def tspec(x: a.TypeSpec) = wtf // will be dealt for directly
-  def tspec(x: a.TypeSpec) = x map apply getOrElse ctx.mkAbsType
+  def tspec(x: a.TypeSpec) = Lazy(x map apply getOrElse ctx.mkAbsType)
   def tparam(x: a.TypeParam) = mkUnique(x).value.asInstanceOf[AbsTyp] // TODO make cleaner
   
   
@@ -88,7 +88,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
       pushCtx
       val ps = params map apply
       val newAbsTyps = ctx.absTyps //.map (_ nam)
-      println(ct, newAbsTyps)
+//      println(ct, newAbsTyps)
       popCtx
       ConcTyp(nam, (typs map tparam) ++ newAbsTyps, regs, ps)
 //    case at: a.AbsTyp => super.apply(x)
@@ -99,7 +99,9 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
 //    println(s"Typ: ${t.value}")
 //    println(s"Typ: $t")
 //    println(t, t.typs.size)
+    
     if (x.targs.size > t.typs.size) throw CompileError(s"Too many type arguments in $x")
+    
 //    else if (x.targs.size < t.typs.size)
     val targs = (x.targs map apply) ++ (
         for{i <- 0 until (t.typs.size - x.targs.size)} yield ctx.mkAbsType
@@ -111,7 +113,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
     pushCtx
     val r = super.delegate(x)
 //    val cstrs = ctx.cstrs
-    ctx += (r.ret, r.body.typ)
+    ctx += (r.ret.get, r.body.typ)
 //    println(ctx.cstrs toMap)
     new Unify(ctx.cstrs toMap)(r) oh_and popCtx
   }
@@ -229,7 +231,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
     def rargs = self.rargs
     def parmzd = f.value
     
-    def retType = transType(f.ret)
+    def retType = transType(f.ret.get)
     
   }
   implicit class TBuild(self: Build) extends Inst {
@@ -277,7 +279,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
 //    }
     def fieldType(id: VId) = t.value match {
       case t: ConcTyp =>
-        t.getField(id) map (l => transType(l.typ)) getOrElse
+        t.getField(id) map (l => transType(l.typ.get)) getOrElse
         (throw CompileError(s"Type $self does not have field $id"))
       case _ => wtf
     }

@@ -50,10 +50,10 @@ object REPL extends App {
       case Success(fun: Fun, _) =>
         
         val f = ps(fun)
-        println(f)
+//        println(f)
         
         val r = rs(f)
-        println(r)
+//        println(r)
         
         val t = ty(r)
         println(t)

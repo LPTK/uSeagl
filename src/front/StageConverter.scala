@@ -223,7 +223,7 @@ class Presolve extends StageConverter(Ast, Resolving) {
 //    popCtx
 //    ctx(x.nam) = r
 //    r
-    super.apply(x) and {popCtx; ctx(x.nam) = _}
+    super.delegate(x) and {popCtx; ctx(x.nam) = _}
   }
   override def apply(x: a.ConcTyp) =
     { pushCtx; super.apply(x) } and { popCtx; ctx(x.nam) = _ }
