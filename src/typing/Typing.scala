@@ -15,7 +15,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
 //  val btypsc = rs.btyps map mkCycle // apply
 //  val btyps = btypsc map (_ value)
 //  val btyps = rs.btyps map mkCycle // apply
-  val btyps = rs.btyps map (t => mkCycle(t.value)) // apply
+  val btyps = rs.btyps map (t => mkUnique(t.value)) // apply
   
 //  def btByName(nam: Sym) = new Cyclic(btyps.find { _.nam == TId(nam) } get)
   def btByName(nam: Sym) = (btyps.find { _.nam == TId(nam) } get)
@@ -25,8 +25,8 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
   def RefType(typ: Type, reg: Reg) = Type(RefTyp, Seq(typ), Seq(reg))
   
   
-  def typs(x: a.TypSym) = mkCycle(x.value)
-  def funs(x: a.FunSym) = mkCycle(x.value)
+  def typs(x: a.TypSym) = mkUnique(x.value)
+  def funs(x: a.FunSym) = mkUnique(x.value)
   def vars(x: a.VarSym) = apply(x)
   
   def terms(x: a.Term) = { // TODO perform translations!
@@ -79,7 +79,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
   
 //  def tspec(x: a.TypeSpec) = wtf // will be dealt for directly
   def tspec(x: a.TypeSpec) = x map apply getOrElse ctx.mkAbsType
-  def tparam(x: a.TypeParam) = mkCycle(x).value.asInstanceOf[AbsTyp] // TODO make cleaner
+  def tparam(x: a.TypeParam) = mkUnique(x).value.asInstanceOf[AbsTyp] // TODO make cleaner
   
   
   
@@ -88,6 +88,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
       pushCtx
       val ps = params map apply
       val newAbsTyps = ctx.absTyps //.map (_ nam)
+      println(ct, newAbsTyps)
       popCtx
       ConcTyp(nam, (typs map tparam) ++ newAbsTyps, regs, ps)
 //    case at: a.AbsTyp => super.apply(x)
@@ -97,6 +98,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
     val t = typs(x.t)
 //    println(s"Typ: ${t.value}")
 //    println(s"Typ: $t")
+//    println(t, t.typs.size)
     if (x.targs.size > t.typs.size) throw CompileError(s"Too many type arguments in $x")
 //    else if (x.targs.size < t.typs.size)
     val targs = (x.targs map apply) ++ (
@@ -105,9 +107,9 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
     Type(t, targs, x.rargs)
   }
   
-  override def apply(x: a.Fun) = {
+  override def delegate(x: a.Fun) = {
     pushCtx
-    val r = super.apply(x)
+    val r = super.delegate(x)
 //    val cstrs = ctx.cstrs
     ctx += (r.ret, r.body.typ)
 //    println(ctx.cstrs toMap)
@@ -119,7 +121,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
   
   case class Ctx (
 //      cstrs: ArrayBuffer[(Typ,Typ)],
-      cstrs: ArrayBuffer[(AbsTyp,Typ)],
+      cstrs: ArrayBuffer[(AbsTyp,Type)],
       parent: Option[Ctx] )
   {
 //    def += (tt: (Type, Type)) {
@@ -130,25 +132,33 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
       tt match { // TODO: handle possible constraint cycles
   //      case (at: AbsTyp, ct: ConcTyp) =>
   //        cstrs += (at.t.value -> ct.t.value)
-        case (TType(t1, targs1, rargs1), TType(t2, targs2, rargs2)) =>
-          add(t1,t2)
+        case (TType(at:AbsTyp, targs1, rargs1), t2) =>
+          assert(targs1.size === 0)
+          assert(rargs1.size === 0)
+          cstrs += (at -> t2)
+        
+        case (_, TType(_:AbsTyp, _, _)) => +=(tt.swap)
+        
+        case (TType(t1:ConcTyp, targs1, rargs1), TType(t2:ConcTyp, targs2, rargs2)) =>
+//          add(t1,t2)
+          if (t1 =/= t2) throw UnificationError(t1,t2)
   //        (targs1 zip targs2) map (+=(_,_))
           (targs1 zip targs2) map += //(+=(_:Type,_:Type))
       }
     }
-    def add (t1: Typ, t2: Typ): Unit = (t1,t2) match {
-      case _ if t1 === t2 =>
-//      case (_:ConcTyp, _:ConcTyp) => println(t1.id,t2.id,t1==t2)
-      case (_:ConcTyp, _:ConcTyp) => throw UnificationError(t1,t2)
-      case (_:ConcTyp, _:AbsTyp) => add(t2,t1)
-//      case (t1:AbsTyp, t2:ConcTyp) => cstrs += (t1 -> t2)
-      case (t1:AbsTyp, _) =>
-////        for ((k,v) <- cstrs if v === t1)
-////          cstrs(k) = t1
-//        for (i <- 0 until cstrs.size if cstrs(i)._1 == t1)
-//          cstrs(i) = cstrs(i)._1 -> t2
-        cstrs += (t1 -> t2)
-    }
+//    def add (t1: Typ, t2: Typ): Unit = (t1,t2) match {
+//      case _ if t1 === t2 =>
+////      case (_:ConcTyp, _:ConcTyp) => println(t1.id,t2.id,t1==t2)
+//      case (_:ConcTyp, _:ConcTyp) => throw UnificationError(t1,t2)
+//      case (_:ConcTyp, _:AbsTyp) => add(t2,t1)
+////      case (t1:AbsTyp, t2:ConcTyp) => cstrs += (t1 -> t2)
+//      case (t1:AbsTyp, _) =>
+//////        for ((k,v) <- cstrs if v === t1)
+//////          cstrs(k) = t1
+////        for (i <- 0 until cstrs.size if cstrs(i)._1 == t1)
+////          cstrs(i) = cstrs(i)._1 -> t2
+//        cstrs += (t1 -> t2)
+//    }
     
     val absTyps = ArrayBuffer[AbsTyp]()
     def mkAbsType =

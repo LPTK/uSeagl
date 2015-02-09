@@ -67,7 +67,7 @@ self: Stage =>
     override def toString = this match {
       case ConcTyp(nam, typs, regs, params) =>
 //        s"$nam[${typs mkString ", "}]{${regs mkString ", "}}(${params mkString ", "})"
-        "typ " + nam + mkTyps(typs) + mkRegs(regs) + mkArgs(params)
+        "typ " + nam + mkTyps(typs map tpname) + mkRegs(regs) + mkArgs(params)
       case AbsTyp(nam, typs, regs, ud) =>
 //        s"$nam[${typs mkString ", "}]{${regs mkString ", "}}=?"
         "" + nam + mkTyps(typs) + mkRegs(regs) + "=?"
@@ -101,8 +101,8 @@ self: Stage =>
       spec: Spec,
       body: Term  // Cyclic[Term]
   ) extends Decl with Parmzd with Unique {
-    override def toString = "fun " + nam + mkStr(typs,"[",", ","]",false) +
-      mkStr(regs,"{",", ","}",false) + mkStr(params,"(",", ",")",true) + s": $ret = $body"
+    override def toString = "fun " + nam + mkTyps(typs map tpname) +
+      mkRegs(regs) + mkArgs(params,true) + s": $ret = $body"
   }
   
   
@@ -116,7 +116,7 @@ self: Stage =>
     if (!showEmpty && xs.isEmpty) ""
     else xs.mkString(start, sep, end)
   
-  def mkArgs(xs: Traversable[_]) = mkStr(xs,"(",", ",")",false)
+  def mkArgs(xs: Traversable[_],se:Bool=false) = mkStr(xs,"(",", ",")",se)
   def mkTyps(xs: Traversable[_]) = mkStr(xs,"[",", ","]",false)
   def mkRegs(xs: Traversable[_]) = mkStr(xs,"{",", ","}",false)
   

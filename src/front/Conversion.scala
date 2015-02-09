@@ -38,12 +38,19 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
     case a.FieldAssign(e, id, v) => FieldAssign(terms(e), id, terms(v))
   }
   
-  def apply(x: a.Fun): Fun =
+  final def apply(x: a.Fun): Fun =
+//    funTable getOrElse (x, mkUnique(x))
+    if (funTable isDefinedAt x) funTable(x)
+    else mkUnique(x)
+  def delegate(x: a.Fun): Fun =
     Fun(x.nam, x.typs map tparam, x.regs, x.params map apply, tspec(x.ret), Spec.empty, terms(x.body)) 
   
   def apply(x: a.Type): Type = Type(typs(x.t), x.targs map apply, x.rargs)
   
-  def apply(x: a.Typ): Typ = x match {
+  final def apply(x: a.Typ): Typ =
+    if (typTable isDefinedAt x) typTable(x)
+    else mkUnique(x)
+  def delegate(x: a.Typ): Typ = x match {
 //    case x: a.ConcTyp => ConcTyp(x.nam, x.typs, x.regs, x.params map apply)
 //    case x: a.AbsTyp => AbsTyp(x.nam, x.typs, x.regs)
     case t: a.ConcTyp => apply(t)
@@ -62,8 +69,8 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   
 //  def apply(x: a.Local): Local = Local(x.nam, tspec(x.typ))
   def apply(x: a.Local): Local =
-    if (vars isDefinedAt x) vars(x)
-    else Local(x.nam, tspec(x.typ)) and (vars(x) = _)
+    if (varTable isDefinedAt x) varTable(x)
+    else Local(x.nam, tspec(x.typ)) and (varTable(x) = _)
   
   def apply(x: a.Binding): Binding = Binding(x.nam, terms(x.value))
   
@@ -72,31 +79,31 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   
 //  val funs = HashSet[Cyclic[Fun]]()
 //  val funs = HashMap[Cyclic[a.Fun], Cyclic[Result[Fun]]]()
-  val funs = HashMap[a.Fun, Cyclic[Fun]]()
+  val funTable = HashMap[a.Fun, Cyclic[Fun]]()
 //  val funs = HashMap[a.Fun, Result[Fun]]()
 //  val funs = HashMap[a.Fun, Cyclic[Result[Fun]]]()
-  val typs = HashMap[a.Typ, Cyclic[Typ]]()
-  val vars = HashMap[a.Local, Local]()
+  val typTable = HashMap[a.Typ, Cyclic[Typ]]()
+  val varTable = HashMap[a.Local, Local]()
   
 //  def apply(x: Cyclic[a.Fun]): Cyclic[Fun] = mkCycle(x.value)
 //  def apply(x: Cyclic[a.Typ]): Cyclic[Typ] = mkCycle(x.value)
   
-  def mkCycle(k: a.Fun): Cyclic[Fun] = {
+  def mkUnique(k: a.Fun): Cyclic[Fun] = {
 //    println(s"cf ${funs isDefinedAt k}  ${k}")
-    if (funs isDefinedAt k) funs(k)
+    if (funTable isDefinedAt k) funTable(k)
     else new Cyclic[Fun]({
       cf =>
-        funs += ((k -> cf))
-        apply(k)
+        funTable += ((k -> cf))
+        delegate(k)
     })
   }
-  def mkCycle(k: a.Typ): Cyclic[Typ] = {
+  def mkUnique(k: a.Typ): Cyclic[Typ] = {
 //    println(s"cf ${typs isDefinedAt k}  ${k}")
-    if (typs isDefinedAt k) typs(k)
+    if (typTable isDefinedAt k) typTable(k)
     else new Cyclic[Typ]({
       cf =>
-        typs += ((k -> cf))
-        apply(k)
+        typTable += ((k -> cf))
+        delegate(k)
     })
   } //oh_and println(s"$b >> ${k.id} $k")
 //  def mkVar(k: a.Local): Local =
@@ -207,7 +214,7 @@ class Presolve extends StageConverter(Ast, Resolving) {
   def tparam(x: a.TypeParam) = AbsTyp(x, Seq(), Seq(), true) and (ctx(x) = _)
   
   
-  override def apply(x: a.Fun) = { // TODO use and
+  override def delegate(x: a.Fun) = { // TODO use and
     pushCtx
 //    x.typs foreach (p => ctx(p) = AbsTyp(p, Seq(), Seq()))
     x.params foreach (p => ctx(p.nam) = apply(p))
@@ -243,17 +250,17 @@ class Presolve extends StageConverter(Ast, Resolving) {
 class Resolve(ps: Presolve) extends StageConverter(Resolving, Resolved) {
   import b._
   
-  val btyps = ps.btyps map mkCycle // apply
+  val btyps = ps.btyps map mkUnique // apply
   
-  def typs(x: a.TypSym) = mkCycle(x.get) //apply(x.get) //x.get flatMap apply
-  def funs(x: a.FunSym) = mkCycle(x.get)
+  def typs(x: a.TypSym) = mkUnique(x.get) //apply(x.get) //x.get flatMap apply
+  def funs(x: a.FunSym) = mkUnique(x.get)
 //    Lazy(apply(x.get))
 //    apply(new Cyclic[a.Fun](_ => x.get))
   def vars(x: a.VarSym) = apply(x.get) //apply(x.get) //x.get flatMap apply
   def terms(x: a.Term)  = apply(x)
   
   def tspec(x: a.TypeSpec) = x map apply
-  def tparam(x: a.TypeParam) = mkCycle(x).value.asInstanceOf[AbsTyp] // TODO make cleaner // apply(x)
+  def tparam(x: a.TypeParam) = mkUnique(x).value.asInstanceOf[AbsTyp] // TODO make cleaner // apply(x)
   
   
   

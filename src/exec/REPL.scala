@@ -37,6 +37,8 @@ object REPL extends App {
         
       case Success(Var(VId('ctx)), _) =>
         println(ctx)
+        println("Types:\n  " + ty.typTable.values.mkString("\n  "))
+        println("Funs:\n  " + ty.funTable.values.mkString("\n  "))
         
       case Success(Var(VId('h)), _) if !(ctx isDefinedAt VId('h)) =>
         println(ex.h)
