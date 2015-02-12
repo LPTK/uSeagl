@@ -7,21 +7,24 @@ import Stages._
 import Reporting._
 import Regions._
 
+/**
+ * TODO
+ *  rm state modif in impl classes
+ *  unify fun return/arg in different calls
+ *  treat build's args unif correctly
+ * 
+ */
 class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
   import b._
   import collection._
   import mutable.ArrayBuffer
   import mutable.HashMap
   
-//  val btypsc = rs.btyps map mkCycle // apply
-//  val btyps = btypsc map (_ value)
-//  val btyps = rs.btyps map mkCycle // apply
-  val btyps = rs.btyps map (t => getUnique(t.value)) // apply
+  val btyps = rs.btyps map (t => getUnique(t.value))
   
 //  val allTyps = HashMap[Typ, Cyclic[Typ]]()
   
   
-//  def btByName(nam: Sym) = new Cyclic(btyps.find { _.nam == TId(nam) } get)
   def btByName(nam: Sym) = (btyps.find { _.nam == TId(nam) } get)
   
   val IntType = Type(btByName('Int), Seq(), Seq())
@@ -30,12 +33,18 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
   
   val bfuns = rs.bfuns map (t => getUnique(t.value))
   
+  case class FunInfo(argTyps: Seq[AbsTyp])
+  val funInfo = HashMap[Cyclic[Fun],FunInfo]()
+  
   
   def typs(x: a.TypSym) = getUnique(x.value)
   def funs(x: a.FunSym) = getUnique(x.value)
   def vars(x: a.VarSym) = apply(x)
   
-  def terms(x: a.Term) = { // TODO perform translations!
+  def tspec(x: a.TypeSpec) = x map apply getOrElse ctx.mkAbsType
+  def tparam(x: a.TypeParam) = getUnique(x).value.asInstanceOf[AbsTyp] // TODO make cleaner
+  
+  def terms(x: a.Term) = {
     def c[T](x: Any) = x.asInstanceOf[T]
     val r = super.apply(x)
     val t = x match {
@@ -46,20 +55,18 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
         ctx += (a.typ.valType -> IntType)
         ctx += (b.typ.valType -> IntType)
         IntType
-      case a.Var(vs) => ref(apply(vs).typ, vs.nam) // TODO MAKE REF
-      case a.Block(s,e) => c[Block](r).ret.typ //terms(e).typ
+      case a.Var(vs) => ref(apply(vs).typ, vs.nam)
+      case a.Block(s,e) => //c[Block](r).ret.typ //terms(e).typ
+        val Block(s,e) = r
+        e.typ
       case a.Ite(c,t,e) =>
-//        val ct = terms(c).typ
-//        if (ct != IntType) throw TypeMismatch(ct, IntType)
         val Ite(c,t,e) = r
         ctx += (c.typ.valType -> IntType)
 //        val tt = t.typ
 //        ctx += (tt -> e.typ)
 //        tt
         ctx.leastUpperBound(t.typ, e.typ)
-//      case a.Build(t,a) => apply(t)
       case b: a.Build =>
-//        if (b.args.size != b.typ.t.value.fields.size)
         b.typ.t.value match {
           case a.ConcTyp(_, _, _, fs) if b.args.size != fs.size =>
             throw CompileError(s"Wrong number of arguments in object construction $b")
@@ -67,22 +74,16 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
             throw CompileError(s"Cannot construct abstract type $at")
           case _ =>
         }
-//        println(apply(b))
-        r.asInstanceOf[Build].retType // apply(t)
-//      case a.FCall(fs,ta,ra,a) => funs(fs).value.retType
+        r.asInstanceOf[Build].retType
       case fc: a.FCall =>
         if (fc.args.size != fc.f.value.params.size)
           throw CompileError(s"Wrong number of arguments in function call $fc")
-//        r.asInstanceOf[FCall].retType
         val tfc: FCall = r.asInstanceOf[FCall]
-        tfc.args map (_.typ.valType) zip (tfc.paramTypes) foreach (ctx += _) // { case(a,b) => a -> b } //{ _ -> _ }
+        tfc.args map (_.typ.valType) zip (tfc.paramTypes) foreach (ctx += _)
         tfc.retType
       case a.FieldAccess(e, id) => // TODO handle refs
         val FieldAccess(e, id) = r
         val typ = e.typ.valType
-//        println(typ, id)
-//        println(terms(e).typ.t == RefTyp)
-//        terms(e).typ match { case Type(RefTyp,_,_) => }
         typ.t.value match {
           case ct @ ConcTyp(_, typs, regs, params) => RefType(typ.fieldType(id), Reg.empty)
           case at : AbsTyp => throw CompileError(s"Unknown field access _.$id on abstract type $at")
@@ -92,21 +93,14 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
     Typd(r, t)
   }
   
-//  def tspec(x: a.TypeSpec) = wtf // will be dealt for directly
-  def tspec(x: a.TypeSpec) = x map apply getOrElse ctx.mkAbsType
-  def tparam(x: a.TypeParam) = getUnique(x).value.asInstanceOf[AbsTyp] // TODO make cleaner
-  
-  
   
   override def apply(x: a.ConcTyp) = x match {
-    case ct @ a.ConcTyp(nam, typs, regs, params) =>
+    case a.ConcTyp(nam, typs, regs, params) =>
       pushCtx
       val ps = params map apply
-      val newAbsTyps = ctx.absTyps //.map (_ nam)
-//      println(ct, newAbsTyps)
+      val newAbsTyps = ctx.absTyps
       popCtx
       ConcTyp(nam, (typs map tparam) ++ newAbsTyps, regs, ps)
-//    case at: a.AbsTyp => super.apply(x)
   }
   
   override def apply(x: a.Type) = {
@@ -258,34 +252,6 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
   
   
   
-//  def print(t: Type) = {
-//    val n = t.t.value match {
-//      case ConcTyp(nam, _, _, _) => nam
-//      case AbsTyp(nam, _, _) => nam
-//    }
-//    s"$n[{t.targs mkString ", "}]" t.rargs
-//  }
-//  def print(t: Typ) = {
-//    t match {
-//      case ConcTyp(nam, typs, regs, params) =>
-//        s"$nam[${typs mkString ", "}]{${regs mkString ", "}}(${params mkString ", "})"
-//      case AbsTyp(nam, typs, regs) =>
-//        s"$nam[${typs mkString ", "}]{${regs mkString ", "}}=?"
-//    }
-//  }
-  
-  
-  
-//  implicit class TFun(self: Fun) extends Inst {
-//    import self._
-//    
-//    def targs = self.targs
-//    def rargs = self.rargs
-//    def parmzd = t.value
-//    
-//    def retType = transType(ret)
-//    
-//  }
   implicit class TFCall(self: FCall) extends Inst {
     import self._
     
@@ -304,6 +270,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
         val af = funTable.collectFirst{case (af,`f`) => af}.get
         af.params map (_ => ctx.mkAbsType)
       }
+//      else funInfo(f).argTyps
     
   }
   implicit class TBuild(self: Build) extends Inst {
@@ -321,8 +288,12 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
 //        def parmzd = typ.t.value
 //      } transType typ
 //      self.args map (ctx += (_.typ -> ))
+      
+      //////////////////////////////
+      // TODO This is really stupid; args does not correspond to targs
       for (i <- 0 until args.size)
         ctx += (args(i).typ -> targs(i))
+      //////////////////////////////
       fromGenArgs
     }
     
@@ -335,20 +306,6 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
     def rargs = self.rargs
     def parmzd = t.value
     
-//    def fieldType(id: VId) = t.value match {
-//      case t: ConcTyp =>
-//        val Type(ft, targs, rargs) = t.getField(id).typ
-//        println("> ", t, self.t.typs, t.getField(id).typ)
-//        val tta = targs map {
-////          case ct: ConcTyp => ct
-//          case Type(Cyclic(at: AbsTyp), _, _) if self.t.typs contains at =>
-////            val r = self.targs.
-//            self.targs(self.t.typs.indexOf(at))
-//          case t => t
-//        }
-//        Type(ft, tta, rargs)
-//      case _ => wtf
-//    }
     def fieldType(id: VId) = t.value match {
       case t: ConcTyp =>
         t.getField(id) map (l => transType(l.typ)) getOrElse
