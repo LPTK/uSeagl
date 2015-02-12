@@ -74,7 +74,10 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
             throw CompileError(s"Cannot construct abstract type $at")
           case _ =>
         }
-        r.asInstanceOf[Build].retType
+        val b2 @ Build(Type(Cyclic(t: ConcTyp), _, _), args) = r
+        for (i <- 0 until args.size)
+          ctx += (args(i).typ -> b2.transType(t.params(i).typ))
+        b2.retType
       case fc: a.FCall =>
         if (fc.args.size != fc.f.value.params.size)
           throw CompileError(s"Wrong number of arguments in function call $fc")
@@ -280,22 +283,21 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
     def rargs = typ.rargs
     def parmzd = typ.t.value
     
-    def retType = {
-      val fromGenArgs = transType(typ)
-//      val fromArgs = new Inst {
-//        def targs = self.targs
-//        def rargs = self.rargs
-//        def parmzd = typ.t.value
-//      } transType typ
-//      self.args map (ctx += (_.typ -> ))
-      
-      //////////////////////////////
-      // TODO This is really stupid; args does not correspond to targs
-      for (i <- 0 until args.size)
-        ctx += (args(i).typ -> targs(i))
-      //////////////////////////////
-      fromGenArgs
-    }
+//    // TODOne: mv this code to 'terms' instead of having it being implicit
+//    def retType = {
+//      val fromGenArgs = transType(typ)
+//      
+//      val t = typ.t.value match {
+//        case ct: ConcTyp => ct
+//        case at: AbsTyp => wtf // should be prevented in 'terms' // throw CompileError("")
+//      }
+//      
+//      for (i <- 0 until args.size)
+////        ctx += (args(i).typ -> targs(i))
+//        ctx += (args(i).typ -> transType(t.params(i).typ))
+//      fromGenArgs
+//    }
+    def retType = transType(typ)
     
   }
   
