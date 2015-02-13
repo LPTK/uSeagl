@@ -8,12 +8,24 @@ import Proxy._
 import scala.util.{Try, Success, Failure}
 import common.Reporting
 import collection.mutable.ArrayBuffer
+import collection.mutable.HashMap
 
+abstract class StageState[S <: Stage](val s: S) {
+  val funTable: HashMap[FUid, Cyclic[s.Fun]]
+  val typTable: HashMap[TUid, Cyclic[s.Typ]]
+  val varTable: HashMap[VUid, s.Local]
+}
 
 abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
-  import collection.mutable.HashMap
   import b._
   
+//  val state: StageState[b.type]
+  val state = new StageState[b.type](b) {
+    val funTable = HashMap[FUid, Cyclic[s.Fun]]()
+    val typTable = HashMap[TUid, Cyclic[s.Typ]]()
+    val varTable = HashMap[VUid, s.Local]()
+  }
+  import state._
   
   /** Delayed checking useful for avoiding illegal cyclic dependencies */
   
@@ -85,14 +97,6 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   
   
   /** Cycle handling */
-  
-//  val funs = HashSet[Cyclic[Fun]]()
-//  val funs = HashMap[Cyclic[a.Fun], Cyclic[Result[Fun]]]()
-  val funTable = HashMap[FUid, Cyclic[Fun]]()
-//  val funs = HashMap[a.Fun, Result[Fun]]()
-//  val funs = HashMap[a.Fun, Cyclic[Result[Fun]]]()
-  val typTable = HashMap[TUid, Cyclic[Typ]]()
-  val varTable = HashMap[VUid, Local]()
   
 //  def apply(x: Cyclic[a.Fun]): Cyclic[Fun] = mkCycle(x.value)
 //  def apply(x: Cyclic[a.Typ]): Cyclic[Typ] = mkCycle(x.value)

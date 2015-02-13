@@ -24,15 +24,19 @@ object FId { def apply(str: Str) = new FId(Sym(str)) }
 case class VId(sym: Sym) extends Id("Local")
 object VId { def apply(str: Str) = new VId(Sym(str)) }
 
-class FUid
-class TUid
-class VUid
+trait Uid extends Unique {
+  override def toString = s"[$id]"
+}
+class FUid extends Uid
+class TUid extends Uid
+class VUid extends Uid
 
 
 trait Pgrms {
 self: Stage =>
   
-  val dispIds = false
+//  val dispIds = false
+  val dispIds = true
   
   case class Pgrm(typs: Map[Id,ConcTyp], funs: Map[Id,Fun])
   
@@ -40,16 +44,17 @@ self: Stage =>
   
 //  class FUid
   
-  sealed trait Typ extends Unique with Parmzd {
+//  sealed trait Typ extends Unique with Parmzd {
+  sealed trait Typ extends Parmzd {
     val uid: TUid
     val nam: TId
     val typs: Seq[TypeParam] // Seq[TId]
     val regs: Seq[VId]
     
-    def namStr = if (dispIds) s"[$id]$nam" else nam.toString
+    def namStr = if (dispIds) s"$uid$nam" else nam.toString
     
     override def toString =
-    (if (dispIds) s"[$id]" else "") +
+    (if (dispIds) s"$uid" else "") +
     (this match {
       case ConcTyp(uid, nam, typs, regs, params) =>
         "typ " + nam + mkTyps(typs map tpname) + mkRegs(regs) + mkArgs(params)
@@ -78,7 +83,8 @@ self: Stage =>
       ret: TypeSpec,
       spec: Spec,
       body: Term
-  ) extends Decl with Parmzd with Unique {
+//  ) extends Decl with Parmzd with Unique {
+  ) extends Decl with Parmzd {
     override def toString = "fun " + nam + mkTyps(typs map tpname) +
       mkRegs(regs) + mkArgs(params,true) + s": $ret = $body"
   }

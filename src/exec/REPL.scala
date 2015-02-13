@@ -49,8 +49,8 @@ object REPL extends App {
           println(ex.h)
         case "c" =>
           println(ctx)
-          println("Types:\n  " + ty.typTable.values.mkString("\n  "))
-          println("Funs:\n  " + ty.funTable.values.mkString("\n  "))
+          println("Types:\n  " + ty.state.typTable.values.collect{case Cyclic(ct: Typed.ConcTyp) => ct}.mkString("\n  "))
+          println("Funs:\n  " + ty.state.funTable.values.mkString("\n  "))
         case _ => println(s"Unknown command :$c")
       }
       
@@ -88,11 +88,13 @@ object REPL extends App {
       case Success(b @ Binding(_id, value), _) =>
 //        ctx(id) = ex(rs(ps(value)))
 //        println(ctx(id))
-        val a = rs(ps(value))
+//        val a = rs(ps(value))
         val Resolved.Binding(id, v) = rs(ps(b))
+        val tv = ty.typeUnify(v)
+        val xv = ex(v, ctx toMap)
         if (ctx isDefinedAt id)
           ex.h.dealloc(ctx(id))
-        ctx(id) = ex(v, ctx toMap)
+        ctx(id) = xv
 //        println(v)
         println(s"$id: ${ex.h.dispVal(ctx(id))}")
       

@@ -14,19 +14,22 @@ object Unify {
    val singleStaged = SingleStaged(Typed)
 }
 /** TODO: what about ctrs overriden? a->X; a->Y */
-class Unify(val ty: Typing, unifs: Map[AbsTyp,Type]) extends singleStaged.Identity {
+class Unify(st: StageState[Typed.type], unifs: Map[AbsTyp,Type]) extends singleStaged.Identity {
+  
+  override val state = st
+  import state._
   
 //  override val funTable = ty.funTable
 //  val typTable = HashMap[a.Typ, Cyclic[Typ]]()
 //  val varTable = HashMap[a.Local, Local]()
   
-//  override def getUnique(x: Typ) = ty.typTable.find(_ == x)
-  override def getUnique(x: Typ) = {
-//    println(x, ty.typTable.values map (_ value))
-    ty.typTable.values.find(_.value === x) get
-//    ty.allTypes(x)
-  } //and println
-//  override def getUnique(x: Fun) = ty.funTable.values.find(_.value === x) get
+////  override def getUnique(x: Typ) = ty.typTable.find(_ == x)
+//  override def getUnique(x: Typ) = {
+////    println(x, ty.typTable.values map (_ value))
+//    typTable.values.find(_.value === x) get
+////    ty.allTypes(x)
+//  } //and println
+////  override def getUnique(x: Fun) = ty.funTable.values.find(_.value === x) get
   
   
   println(unifs)
@@ -49,7 +52,7 @@ class Unify(val ty: Typing, unifs: Map[AbsTyp,Type]) extends singleStaged.Identi
   override def apply(x: Type) = (x.t.value match {
     case at: AbsTyp if unifsTrans isDefinedAt at => unifsTrans(at)
     case _ => super.apply(x)
-  }) //and println
+  }) and println
   override def tspec(x: TypeSpec) = apply(x) // Lazy(apply(x.get))
   override def tparam(x: TypeParam) = apply(x)
   

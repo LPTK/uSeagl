@@ -11,10 +11,12 @@ import Regions._
  * TODO
  *  treat build's args unif correctly
  *  rm cyclic dep in fun args/ret transl
+ *  unif does not fully propagate (?!)
  * 
  */
 class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
   import b._
+  import state._
   import collection._
   import mutable.ArrayBuffer
   import mutable.HashMap
@@ -153,7 +155,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
   override def fctComputed(k: a.Fun, x: Cyclic[Fun]) = {
 //    println(s"comp ${new Unify(ctx.cstrs toMap).mkUnique(x)}")
 //    new Unify(ctx.cstrs toMap).mkUnique(x) oh_and {popCtx; flushChecks}
-    new Unify(this, ctx.cstrs toMap).getUnique(x) and {popCtx; flushChecks; funTable(k.uid) = _}
+    new Unify(state, ctx.cstrs toMap).getUnique(x) and {popCtx; flushChecks; funTable(k.uid) = _}
   }
   
 ////  override def delegate(x: a.Typ) = {
@@ -224,6 +226,8 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
     def mkAbsType = {
 //      Type(new Cyclic(AbsTyp(ctx.nextId, Seq(), Seq(), false) and (absTyps += _)), Seq(), Seq())
       val at = AbsTyp(new TUid, ctx.nextId, Seq(), Seq(), false)
+      println(s"mk $at")
+//      if (at.uid.id == 74) ???
       absTyps += at
 //      Type(new Cyclic(at) and (ct => allTyps += (at -> ct)), Seq(), Seq())
       Type(new Cyclic(at) and (ct => typTable += (at.uid -> ct)), Seq(), Seq())

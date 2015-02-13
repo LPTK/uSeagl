@@ -17,6 +17,12 @@ class Presolve extends StageConverter(Ast, Resolving) {
   import Resolving._
   import b._
   
+//  val state = new StageState(Resolving) {
+//    val funTable = HashMap[FUid, Cyclic[s.Fun]]()
+//    val typTable = HashMap[TUid, Cyclic[s.Typ]]()
+//    val varTable = HashMap[VUid, s.Local]()
+//  }
+  
 //  Predef
   scala.util.control.NonFatal /** if not init here SOF will not be handled correctly; cf https://groups.google.com/forum/#!topic/scala-user/kte6nak-zPM */
   
