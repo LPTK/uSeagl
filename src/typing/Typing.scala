@@ -9,9 +9,8 @@ import Regions._
 
 /**
  * TODO
- *  rm state modif in impl classes
- *  unify fun return/arg in different calls
  *  treat build's args unif correctly
+ *  rm cyclic dep in fun args/ret transl
  * 
  */
 class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
@@ -30,11 +29,14 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
   val IntType = Type(btByName('Int), Seq(), Seq())
   val RefTyp = btByName('Ref)
   def RefType(typ: Type, reg: Reg) = Type(RefTyp, Seq(typ), Seq(reg))
-  
+
+//  case class FunInfo(argTyps: Seq[AbsTyp])
+//  case class FunInfo(argTypes: Seq[Type], retType: Type)
+  case class FunInfo(params: Seq[Local], retType: Type)
+//  val funInfo = HashMap[Cyclic[Fun],FunInfo]()
+  val funInfo = HashMap[a.Fun,FunInfo]()
+    
   val bfuns = rs.bfuns map (t => getUnique(t.value))
-  
-  case class FunInfo(argTyps: Seq[AbsTyp])
-  val funInfo = HashMap[Cyclic[Fun],FunInfo]()
   
   
   def typs(x: a.TypSym) = getUnique(x.value)
@@ -82,8 +84,8 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
         if (fc.args.size != fc.f.value.params.size)
           throw CompileError(s"Wrong number of arguments in function call $fc")
         val tfc: FCall = r.asInstanceOf[FCall]
-        tfc.args map (_.typ.valType) zip (tfc.paramTypes) foreach (ctx += _)
-        tfc.retType
+        tfc.args map (_.typ.valType) zip (tfc.paramTypes(fc.f)) foreach (ctx += _)
+        tfc.retType(fc.f)
       case a.FieldAccess(e, id) => // TODO handle refs
         val FieldAccess(e, id) = r
         val typ = e.typ.valType
@@ -136,7 +138,12 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
   
   override def delegate(x: a.Fun) = {
     pushCtx
-    val r = super.delegate(x)
+//    funInfo(x) = FunInfo(x.params map (_ => ctx.mkAbsType), ctx.mkAbsType)
+//    funInfo(x) = FunInfo(x.params map (_ => ctx.mkAbsType), ctx.mkAbsType)
+//    val r = super.delegate(x)
+    funInfo(x) = FunInfo(x.params map apply, tspec(x.ret))
+    val r = Fun(x.nam, x.typs map tparam, x.regs, funInfo(x).params, funInfo(x).retType, Specs.Spec.empty, terms(x.body))
+    
 //    val cstrs = ctx.cstrs
     ctx += (r.ret, r.body.typ)
 //    println(ctx.cstrs toMap)
@@ -262,18 +269,19 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
     def rargs = self.rargs
     def parmzd = f.value
     
-    def retType =
-      if (f.wasComputerYet) transType(f.ret)
-      else ctx.mkAbsType
+    def retType(x: a.Fun) = transType(funInfo(x).retType)
+//      if (f.wasComputerYet) transType(f.ret)
+//      else funInfo(x).retType // ctx.mkAbsType
     
-    def paramTypes =
-      if (f.wasComputerYet) f.params map (_ typ) map transType
-//      else f.params map (_ => ctx.mkAbsType)
-      else {
-        val af = funTable.collectFirst{case (af,`f`) => af}.get
-        af.params map (_ => ctx.mkAbsType)
-      }
-//      else funInfo(f).argTyps
+    def paramTypes(x: a.Fun) = funInfo(x).params map (_ typ) map transType
+//      if (f.wasComputerYet) f.params map (_ typ) map transType
+////      else f.params map (_ => ctx.mkAbsType)
+//      else {
+////        val af = funTable.collectFirst{case (af,`f`) => af}.get
+////        af.params map (_ => ctx.mkAbsType)
+//        funInfo(x).argTypes
+//      }
+////      else funInfo(f).argTyps
     
   }
   implicit class TBuild(self: Build) extends Inst {

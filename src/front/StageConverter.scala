@@ -57,7 +57,7 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
     funTable getOrElse (x, getUnique(x)) value
   
   def delegate(x: a.Fun): Fun =
-    Fun(x.nam, x.typs map tparam, x.regs, x.params map apply, tspec(x.ret), Spec.empty, terms(x.body)) 
+    Fun(x.nam, x.typs map tparam, x.regs, x.params map apply, tspec(x.ret), Spec.empty, terms(x.body))
   
   def apply(x: a.Type): Type = Type(typs(x.t), x.targs map apply, x.rargs)
   
