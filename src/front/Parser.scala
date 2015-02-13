@@ -15,7 +15,7 @@ object Parser extends StandardTokenParsers with regex.RegParser {
   lexical.reserved   ++= List("if", "then", "else", "fun", "typ", "nil", "new", "@read", "@inval", "@trans")
   
   def typ: Parser[ConcTyp] = "typ" ~> ident ~ (typList?) ~ (regList?) ~ (paramList?) ^^ {
-    case nam ~ typs ~ regs ~ params => ConcTyp(TId(nam),
+    case nam ~ typs ~ regs ~ params => ConcTyp(new TUid, TId(nam),
         typs getOrElse (Seq()),
         regs getOrElse (Seq()),
         params getOrElse (Seq())
@@ -27,7 +27,7 @@ object Parser extends StandardTokenParsers with regex.RegParser {
   def regList: Parser[Seq[VId]] = "{" ~> repsep(ident, ",") <~ "}" ^^ (_ map VId.apply)
   
   def param: Parser[Local] = ident ~ ((":" ~> typez)?) ^^ {
-    case nam ~ t => Local(VId(nam), t)
+    case nam ~ t => Local(new VUid, VId(nam), t)
   }
   
   def targs = ("[" ~> repsep(typez, ",") <~ "]")
@@ -47,7 +47,7 @@ object Parser extends StandardTokenParsers with regex.RegParser {
 //  }
   
   def fun: Parser[Fun] = "fun" ~> ident ~ (typList?) ~ (regList?) ~ (paramList?) ~ ((":" ~> typez)?) ~ (spec?) ~ ("=" ~> expr) ^^ {
-    case nam ~ typs ~ regs ~ params ~ ret ~ spec ~ expr => Fun(FId(nam),
+    case nam ~ typs ~ regs ~ params ~ ret ~ spec ~ expr => Fun(new FUid, FId(nam),
         typs getOrElse (Seq()),
         regs getOrElse (Seq()),
         params getOrElse (Seq()),

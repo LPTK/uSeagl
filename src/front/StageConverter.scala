@@ -54,23 +54,23 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   }
   
   final def apply(x: a.Fun): Fun =
-    funTable getOrElse (x, getUnique(x)) value
+    funTable getOrElse (x.uid, getUnique(x)) value
   
   def delegate(x: a.Fun): Fun =
-    Fun(x.nam, x.typs map tparam, x.regs, x.params map apply, tspec(x.ret), Spec.empty, terms(x.body))
+    Fun(x.uid, x.nam, x.typs map tparam, x.regs, x.params map apply, tspec(x.ret), Spec.empty, terms(x.body))
   
   def apply(x: a.Type): Type = Type(typs(x.t), x.targs map apply, x.rargs)
   
   final def apply(x: a.Typ): Typ =
-    typTable getOrElse (x, getUnique(x)) value
+    typTable getOrElse (x.uid, getUnique(x)) value
   
   def delegate(x: a.Typ): Typ = x match {
     case t: a.ConcTyp => apply(t)
     case t: a.AbsTyp => apply(t)
     case _ => wtf
   }
-  def apply(x: a.ConcTyp): ConcTyp = ConcTyp(x.nam, x.typs map tparam, x.regs, x.params map apply)
-  def apply(x: a.AbsTyp): AbsTyp = AbsTyp(x.nam, x.typs map tparam, x.regs, x.userDefined)
+  def apply(x: a.ConcTyp): ConcTyp = ConcTyp(x.uid, x.nam, x.typs map tparam, x.regs, x.params map apply)
+  def apply(x: a.AbsTyp): AbsTyp = AbsTyp(x.uid, x.nam, x.typs map tparam, x.regs, x.userDefined)
   
   def apply(x: a.Stmt): Stmt = x match {
     case x: a.Expr => apply(x)
@@ -78,8 +78,8 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   }
   
   def apply(x: a.Local): Local =
-    if (varTable isDefinedAt x) varTable(x)
-    else Local(x.nam, tspec(x.typ)) and (varTable(x) = _)
+    if (varTable isDefinedAt x.uid) varTable(x.uid)
+    else Local(x.uid, x.nam, tspec(x.typ)) and (varTable(x.uid) = _)
   
   def apply(x: a.Binding): Binding = Binding(x.nam, terms(x.value))
   
@@ -88,31 +88,31 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   
 //  val funs = HashSet[Cyclic[Fun]]()
 //  val funs = HashMap[Cyclic[a.Fun], Cyclic[Result[Fun]]]()
-  val funTable = HashMap[a.Fun, Cyclic[Fun]]()
+  val funTable = HashMap[FUid, Cyclic[Fun]]()
 //  val funs = HashMap[a.Fun, Result[Fun]]()
 //  val funs = HashMap[a.Fun, Cyclic[Result[Fun]]]()
-  val typTable = HashMap[a.Typ, Cyclic[Typ]]()
-  val varTable = HashMap[a.Local, Local]()
+  val typTable = HashMap[TUid, Cyclic[Typ]]()
+  val varTable = HashMap[VUid, Local]()
   
 //  def apply(x: Cyclic[a.Fun]): Cyclic[Fun] = mkCycle(x.value)
 //  def apply(x: Cyclic[a.Typ]): Cyclic[Typ] = mkCycle(x.value)
   
   def getUnique(k: a.Fun): Cyclic[Fun] = {
 //    println(s"cf ${funs isDefinedAt k}  ${k}")
-    if (funTable isDefinedAt k) funTable(k)
+    if (funTable isDefinedAt k.uid) funTable(k.uid)
     else fctComputed(k, new Cyclic[Fun]({
       cf =>
-        funTable += ((k -> cf))
+        funTable += ((k.uid -> cf))
         delegate(k)
     })) //oh_and flushChecks
   }
   def getUnique(k: a.Typ): Cyclic[Typ] = {
 //    println(s"cf ${typs isDefinedAt k}  ${k}")
-    if (typTable isDefinedAt k) typTable(k)
+    if (typTable isDefinedAt k.uid) typTable(k.uid)
     else new Cyclic[Typ]({
       cf =>
 //        println(s"making $k")
-        typTable += ((k -> cf))
+        typTable += ((k.uid -> cf))
         delegate(k) //oh_and println(s"made $k")
     }) //oh_and flushChecks
   } //oh_and println(s"$b >> ${k.id} $k")

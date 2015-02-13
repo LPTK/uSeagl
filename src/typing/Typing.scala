@@ -70,7 +70,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
         ctx.leastUpperBound(t.typ, e.typ)
       case b: a.Build =>
         b.typ.t.value match {
-          case a.ConcTyp(_, _, _, fs) if b.args.size != fs.size =>
+          case a.ConcTyp(_, _, _, _, fs) if b.args.size != fs.size =>
             throw CompileError(s"Wrong number of arguments in object construction $b")
           case at: a.AbsTyp => 
             throw CompileError(s"Cannot construct abstract type $at")
@@ -90,7 +90,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
         val FieldAccess(e, id) = r
         val typ = e.typ.valType
         typ.t.value match {
-          case ct @ ConcTyp(_, typs, regs, params) => RefType(typ.fieldType(id), Reg.empty)
+          case ct @ ConcTyp(_, _, typs, regs, params) => RefType(typ.fieldType(id), Reg.empty)
           case at : AbsTyp => throw CompileError(s"Unknown field access _.$id on abstract type $at")
         }
   //    case a.FieldAssign(e, id, v) => FieldAssign(terms(e), id, terms(v))
@@ -100,12 +100,12 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
   
   
   override def apply(x: a.ConcTyp) = x match {
-    case a.ConcTyp(nam, typs, regs, params) =>
+    case a.ConcTyp(uid, nam, typs, regs, params) =>
       pushCtx
       val ps = params map apply
       val newAbsTyps = ctx.absTyps
       popCtx
-      ConcTyp(nam, (typs map tparam) ++ newAbsTyps, regs, ps)
+      ConcTyp(uid, nam, (typs map tparam) ++ newAbsTyps, regs, ps)
   }
   
   override def apply(x: a.Type) = {
@@ -142,7 +142,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
 //    funInfo(x) = FunInfo(x.params map (_ => ctx.mkAbsType), ctx.mkAbsType)
 //    val r = super.delegate(x)
     funInfo(x) = FunInfo(x.params map apply, tspec(x.ret))
-    val r = Fun(x.nam, x.typs map tparam, x.regs, funInfo(x).params, funInfo(x).retType, Specs.Spec.empty, terms(x.body))
+    val r = Fun(x.uid, x.nam, x.typs map tparam, x.regs, funInfo(x).params, funInfo(x).retType, Specs.Spec.empty, terms(x.body))
     
 //    val cstrs = ctx.cstrs
     ctx += (r.ret, r.body.typ)
@@ -153,7 +153,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
   override def fctComputed(k: a.Fun, x: Cyclic[Fun]) = {
 //    println(s"comp ${new Unify(ctx.cstrs toMap).mkUnique(x)}")
 //    new Unify(ctx.cstrs toMap).mkUnique(x) oh_and {popCtx; flushChecks}
-    new Unify(this, ctx.cstrs toMap).getUnique(x) and {popCtx; flushChecks; funTable(k) = _}
+    new Unify(this, ctx.cstrs toMap).getUnique(x) and {popCtx; flushChecks; funTable(k.uid) = _}
   }
   
 ////  override def delegate(x: a.Typ) = {
@@ -223,10 +223,10 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
     val absTyps = ArrayBuffer[AbsTyp]()
     def mkAbsType = {
 //      Type(new Cyclic(AbsTyp(ctx.nextId, Seq(), Seq(), false) and (absTyps += _)), Seq(), Seq())
-      val at = AbsTyp(ctx.nextId, Seq(), Seq(), false)
+      val at = AbsTyp(new TUid, ctx.nextId, Seq(), Seq(), false)
       absTyps += at
 //      Type(new Cyclic(at) and (ct => allTyps += (at -> ct)), Seq(), Seq())
-      Type(new Cyclic(at) and (ct => typTable += (a.AbsTyp(at.nam, Seq(), Seq(), false) -> ct)), Seq(), Seq())
+      Type(new Cyclic(at) and (ct => typTable += (at.uid -> ct)), Seq(), Seq())
       // ^ that's really ugly
     }
     
@@ -254,8 +254,8 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
 //  } oh_and popCtx
   def typeUnify(e: a.Expr) = {
     val es = Seq()
-    val Fun(nam, typs, regs, params, ret, spec, body) =
-      apply(a.Fun(FId("[internal]"), es, es, es, None, Specs.Spec.empty, e))
+    val Fun(uid, nam, typs, regs, params, ret, spec, body) =
+      apply(a.Fun(new FUid, FId("[internal]"), es, es, es, None, Specs.Spec.empty, e))
     body
   }
   

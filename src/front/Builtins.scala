@@ -9,15 +9,17 @@ object Builtins {
   import Ast._
   
   val btyps = Seq(
-      ConcTyp(TId("Ref"), Seq(TId("T")), Seq(VId("Pte")), Seq()),
-      ConcTyp(TId("Unit"), Seq(), Seq(), Seq()),
-      ConcTyp(TId("Int"), Seq(), Seq(), Seq())
+      ConcTyp(new TUid, TId("Ref"), Seq(TId("T")), Seq(VId("Pte")), Seq()),
+      ConcTyp(new TUid, TId("Unit"), Seq(), Seq(), Seq()),
+      ConcTyp(new TUid, TId("Int"), Seq(), Seq(), Seq())
   )
   
   val IntType = Type(TId("Int"), Seq(), Seq())
   
   def binIntOp(nam: Str)(op: (Int,Int) => Int) =
-      Fun(FId(nam), Seq(), Seq(), Seq(Local(VId("a"), None), Local(VId("b"), None)), None, Spec.empty,
+      Fun(new FUid, FId(nam), Seq(), Seq(),
+          Seq(Local(new VUid, VId("a"), None), Local(new VUid, VId("b"), None)),
+          None, Spec.empty,
           IntOp(Var(VId("a")),Var(VId("b")),op))
   
   val bfuns = Seq(

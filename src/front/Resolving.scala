@@ -71,7 +71,7 @@ class Presolve extends StageConverter(Ast, Resolving) {
   def terms(x: a.Term)  = apply(x)
   
   def tspec(x: a.TypeSpec) = x map apply
-  def tparam(x: a.TypeParam) = AbsTyp(x, Seq(), Seq(), true) and (ctx(x) = _)
+  def tparam(x: a.TypeParam) = AbsTyp(new TUid, x, Seq(), Seq(), true) and (ctx(x) = _)
   
   
   override def delegate(x: a.Fun) = { // TODO use and
@@ -96,7 +96,7 @@ class Presolve extends StageConverter(Ast, Resolving) {
   override def apply(x: a.Binding) =
 //    super.apply(x) and (ctx(x.nam) = (_:Binding).value)
 //    super.apply(x) and ((b:Binding) => ctx(x.nam) = Local(x.nam, b.value))
-    super.apply(x) oh_and (ctx(x.nam) = Local(x.nam, None))
+    super.apply(x) oh_and (ctx(x.nam) = Local(new VUid, x.nam, None))
   
   override def apply(x: a.Expr): Expr = x match {
     case a.Block(s,e) =>
