@@ -118,7 +118,7 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
 //  }
   override def fctComputed(k: a.Fun, x: Cyclic[Fun]) = {
 //    new Unify2(this).getUnique(x) oh_and popCtx
-    println(x)
+//    println(x)
     new Unify2(this)(x) oh_and popCtx
   }
   
@@ -139,6 +139,22 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
   }
   
   def cstrs = ctx
+  
+  
+  
+  
+  def typeUnify(e: pt.a.Expr) = {
+    val es = Seq()
+    val Cyclic(Fun(uid, nam, typs, regs, params, ret, spec, body)) =
+      renew(pt.apply(pt.a.Fun(new FUid, FId("[internal]"), es, es, es, None, Specs.Spec.empty, e)))
+    body
+  }
+  def typeUnify(b: pt.a.Binding) = {
+    val es = Seq()
+    val Cyclic(Fun(uid, nam, typs, regs, params, ret, spec, body)) =
+      renew(pt.apply(pt.a.Fun(new FUid, FId("[internal]"), es, es, es, b.loc.typ, Specs.Spec.empty, b.value)))
+    body
+  }
   
   
   

@@ -19,6 +19,10 @@ import collection._
 class Unify2(val ag: Aggregate) extends Types.singleStaged.Identity with StageIdentDefs {
   import ag.pt._
   
+  def debug(x: Any) {
+//    println(x)
+  }
+  
   override val state = ag.state
   
 //  sealed trait QualType { def map(f: Type => Type): QualType }
@@ -37,7 +41,7 @@ class Unify2(val ag: Aggregate) extends Types.singleStaged.Identity with StageId
   
   def printCstrs = {
 //    def p[T](t: Traversable[T]) = 
-    println(s"${
+    debug(s"${
       hc map { case(a,b) => s"$a = $b" 
     } mkString " , "}  -  ${
       sc map { case(a,b) => s"$a ~ $b" 
@@ -82,7 +86,7 @@ class Unify2(val ag: Aggregate) extends Types.singleStaged.Identity with StageId
           subs(at) = t2  // Strong(apply(t2))
 //          for (i <- hc.indices) hc(i) = (apply(hc(i)._1), apply(hc(i)._2))
           subs.transform{ case(at,qt) => noCycle(at,qt){ apply(qt) } }
-          println(hc.mkString(", ") + "  " + subs)
+          debug(hc.mkString(", ") + "  " + subs)
         case None =>
         case Some(t) =>
 //          hc += (apply(t) -> apply(t2))
@@ -140,16 +144,16 @@ class Unify2(val ag: Aggregate) extends Types.singleStaged.Identity with StageId
     
   }
   
-  fc.headOption map { case(t,f,tf) => throw CompileError(s"Unknown field access _.$f on abstract type $t") }
+  fc.headOption map { case(t,f,tf) => throw CompileError(s"unknown field access _.$f on abstract type $t") }
   
-  println(subs)
+  debug(subs)
   
   
   /** Note: does not handle abs types with typ args */
   override def apply(x: Type) = (x.t.value match {
 //    case at: AbsTyp if subs isDefinedAt at => subs(at)
     case at: AbsTyp if bindedElem map (_._1 === at) getOrElse false =>
-      throw CompileError(s"Cyclic unification with $at and ${bindedElem.get._2}")
+      throw CompileError(s"cyclic unification with $at and ${bindedElem.get._2}")
     case at: AbsTyp =>
       subs.get(at) match {
         case Some(t) =>
@@ -191,7 +195,7 @@ class Unify(st: StageState[Typed.type], unifs: Map[AbsTyp,Type]) extends Types.s
 //  } //and println
 ////  override def getUnique(x: Fun) = ty.funTable.values.find(_.value === x) get
   
-  
+//  ???
   println("OLD UNIF")
   println(unifs)
   

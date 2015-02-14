@@ -139,8 +139,10 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
 //    else
     fctComputed(k, new Cyclic[Fun]({
       cf =>
-        funTable += ((k.uid -> cf))
-        delegate(k)
+        try {
+          funTable += ((k.uid -> cf))
+          delegate(k)
+        } catch { case t: Throwable => funTable -= k.uid; throw t }
     }, Some(_ == _))) //oh_and flushChecks
   }
   def getUnique(k: a.Typ): Cyclic[Typ] = {
@@ -150,8 +152,10 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
     new Cyclic[Typ]({
       cf =>
 //        println(s"making $k")
-        typTable += ((k.uid -> cf))
-        delegate(k) //oh_and println(s"made $k")
+        try {
+          typTable += ((k.uid -> cf))
+          delegate(k) //oh_and println(s"made $k")
+        } catch { case t: Throwable => typTable -= k.uid; throw t }
     }, Some(_ == _)) //oh_and flushChecks
   } //oh_and println(s"$b >> ${k.id} $k")
 //  def mkVar(k: a.Local): Local =

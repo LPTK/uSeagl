@@ -17,7 +17,7 @@ object REPL extends App {
   
   val ps = new Presolve
   val rs = new Resolve(ps)
-  val ty = new Typing(rs)
+//  val ty = new Typing(rs)
   val ex = new Exec
   
   val pt = new Pretype(rs)
@@ -52,9 +52,9 @@ object REPL extends App {
         case "h" =>
           println(ex.h)
         case "c" =>
-          println(ctx)
-          println("Types:\n  " + ty.state.typTable.values.collect{case Cyclic(ct: Typed.ConcTyp) => ct}.mkString("\n  "))
-          println("Funs:\n  " + ty.state.funTable.values.mkString("\n  "))
+          println("Locals:\n " + ctx.mkString("\n  "))
+          println("Types:\n  " + ag.state.typTable.values.collect{case Cyclic(ct: Typed.ConcTyp) => ct}.mkString("\n  "))
+          println("Funs:\n  " + ag.state.funTable.values.mkString("\n  "))
         case _ => println(s"Unknown command :$c")
       }
       
@@ -81,19 +81,20 @@ object REPL extends App {
         val t = ag.renew(pt(rs(ps(typ))))
         println(t)
       
-      case Success(e: Expr, _) =>
+      case Success(Left(e: Expr), _) =>
         val re = rs(ps(e))
 //        println("Typed: " + ty.terms(re))
         
 //        val te = ty.typeUnify(re)
-//        println("Typed: " + te.typ)
+        val te = ag.typeUnify(re)
+        println("Typed: " + te.typ)
 
         val r = ex(re, ctx toMap)
         println(ex.h.dispVal(r))
         ex.h.dealloc(r)
         // TODO put in ctx
       
-      case Success(b @ Binding(_id, value), _) =>
+      case Success(Right(b @ Binding(_id, value)), _) =>
 //        ctx(id) = ex(rs(ps(value)))
 //        println(ctx(id))
 //        val a = rs(ps(value))
@@ -113,7 +114,9 @@ object REPL extends App {
       case f: Failure =>
         println(f)
         
-      case _ => wtf
+      case _ =>
+        println(t)
+        wtf
         
     }} catch {
       case CompileError(msg) =>
