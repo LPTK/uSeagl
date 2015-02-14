@@ -1,8 +1,8 @@
 package exec
 
 object Memory {
+  import utils._
   import collection.mutable._
-  import util._
   import common._
   import Stages.Resolved._
 //  import Exec._

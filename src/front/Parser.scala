@@ -4,7 +4,7 @@ import scala.util.parsing.combinator.syntactical.StandardTokenParsers
 import scala.util.parsing.input._
 
 object Parser extends StandardTokenParsers with regex.RegParser {
-  import util._
+  import utils._
   import common._
   import Stages.Ast._
   import Specs._

@@ -1,7 +1,7 @@
 package front
 
 object Specs {
-  import util._
+  import utils._
   import Regions._
   
   case class Spec(read: Reg, inval: Reg, transfers: Seq[Trans])

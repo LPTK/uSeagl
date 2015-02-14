@@ -1,6 +1,6 @@
 package common
 
-import util._
+import utils._
 import front._
 import typing._
 
@@ -28,7 +28,7 @@ trait Stage extends Exprs with Types with Pgrms {
 
 
 object Stages {
-  import util.Lazy
+  import utils.Lazy
   import scala.util.Try
   
   trait Pretyped {

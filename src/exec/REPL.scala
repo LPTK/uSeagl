@@ -4,7 +4,7 @@ import common.Reporting
 
 object REPL extends App {
   
-  import util._
+  import utils._
   import common._
   import Stages._
   import Ast._

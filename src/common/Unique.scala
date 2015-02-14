@@ -1,6 +1,6 @@
 package common
 
-import util._
+import utils._
 
 object Unique {
   private var nb = 0

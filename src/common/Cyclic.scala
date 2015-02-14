@@ -1,6 +1,6 @@
 package common
 
-import util._
+import utils._
 
 case class CyclicDependency() extends Exception("Illegal cyclic access")
 

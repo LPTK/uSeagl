@@ -1,10 +1,10 @@
 package exec
 
 //import collection.mutable._
+import utils._
 import Exceptions._
 import Memory._
 import common._
-import util._
 import front._
 //import collection._
 import Predef.{any2stringadd => _, _}

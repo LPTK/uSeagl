@@ -1,6 +1,6 @@
 package typing
 
-import util._
+import utils._
 import common._
 import front._
 import Stages._
