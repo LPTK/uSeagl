@@ -67,6 +67,7 @@ class Exec {
         cp match {
           case IntVal(0) => rec(e) + tmp
           case IntVal(_) => rec(t) + tmp
+          case Nil => rec(e) + tmp
           case _ => throw new IfCondEE(cp)
         }
       

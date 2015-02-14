@@ -54,7 +54,7 @@ object REPL extends App {
         case "c" =>
           println("Locals:\n " + ctx.mkString("\n  "))
           println("Types:\n  " + ag.state.typTable.values.collect{case Cyclic(ct: Typed.ConcTyp) => ct}.mkString("\n  "))
-          println("Funs:\n  " + ag.state.funTable.values.mkString("\n  "))
+          println("Funs:\n  " + ag.state.funTable.values.filter{_.nam =/= ag.IntlFId}.mkString("\n  "))
         case _ => println(s"Unknown command :$c")
       }
       

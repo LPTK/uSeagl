@@ -22,9 +22,10 @@ self: Types.singleStaged.Identity =>
 
 /**
  * TODO:
- *  unify fun args/ret; build args/targs
- *  check Type targs
- *  unif field access
+ *  handle explicit fun typ params, eg
+ *    fun f[T](x:T) = { f(0); f(()); x }
+ *  should not type to
+ *    fun f[T](x: T): Ref[T]{x} = {f[Int](0: Int): Ref[T]{x}; f[Unit](new Unit: Unit): Ref[T]{x}; x: Ref[T]{x}}: Ref[T]{x}
  *  
  */
 //class Aggregate(override val state: StageState[Typed.type]) extends Types.singleStaged.Identity {
@@ -36,6 +37,8 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
   import pt._
   
   override val state = pt.state
+  
+  val IntlFId = FId("[internal]")
   
 //  override def typs(x: a.TypSym) = getUnique(x.value)
 //  override def funs(x: a.FunSym) = getUnique(x.value)
@@ -146,13 +149,13 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
   def typeUnify(e: pt.a.Expr) = {
     val es = Seq()
     val Cyclic(Fun(uid, nam, typs, regs, params, ret, spec, body)) =
-      renew(pt.apply(pt.a.Fun(new FUid, FId("[internal]"), es, es, es, None, Specs.Spec.empty, e)))
+      renew(pt.apply(pt.a.Fun(new FUid, IntlFId, es, es, es, None, Specs.Spec.empty, e)))
     body
   }
   def typeUnify(b: pt.a.Binding) = {
     val es = Seq()
     val Cyclic(Fun(uid, nam, typs, regs, params, ret, spec, body)) =
-      renew(pt.apply(pt.a.Fun(new FUid, FId("[internal]"), es, es, es, b.loc.typ, Specs.Spec.empty, b.value)))
+      renew(pt.apply(pt.a.Fun(new FUid, IntlFId, es, es, es, b.loc.typ, Specs.Spec.empty, b.value)))
     body
   }
   

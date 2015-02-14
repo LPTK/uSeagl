@@ -45,7 +45,7 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
   def tparam(x: a.TypeParam) = getUnique(x).value.asInstanceOf[AbsTyp]
   
   def terms(x: a.Term) = {
-    val r = super.apply(x)
+    var r = super.apply(x)
     val t = x match {
       case a.NilExpr => ctx.mkAbsType
       case a.IntLit(n) => IntType
@@ -66,9 +66,16 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
           case _ =>
         }
         r.asInstanceOf[Build].typ
+//      case fc: a.FCall =>
       case fc: a.FCall =>
+//      case fc @ a.FCall(f, targs, rargs, args) =>
         if (fc.args.size != fc.f.value.params.size)
+//        if (args.size != f.value.params.size)
           throw CompileError(s"Wrong number of arguments in function call $fc")
+        val FCall(f, targs, rargs, args) = r
+        if (targs.size > fc.f.typs.size)
+          throw CompileError(s"Too many type arguments in call $fc")
+        r = FCall(f, targs ++ (for (i <- targs.size until fc.f.typs.size) yield ctx.mkAbsType), rargs, args)
         ctx.mkAbsType // can't know in advance the type of the return; add cstr later
       case a.FieldAccess(e, id) => // TODO handle refs
 //        val FieldAccess(e, id) = r
