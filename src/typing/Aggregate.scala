@@ -55,7 +55,7 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
       case Var(vs) => 
       case Block(s,e) => //c[Block](r).ret.typ //terms(e).typ
         s.foreach {
-          case Binding(loc, valu) =>
+          case Right(Binding(loc, valu)) =>
             ctx.hard_cstrs += (loc.typ -> valu.typ)
           case _ => 
         }

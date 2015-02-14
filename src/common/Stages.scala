@@ -11,7 +11,7 @@ trait Stage extends Exprs with Types with Pgrms {
   type FunSym
   type VarSym
   
-  type Term <: Stmt
+  type Term //<: Stmt
   
   type Decl
   

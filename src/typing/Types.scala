@@ -11,7 +11,7 @@ self: Stage =>
 //  val showTypes = false
   val showTypes = true
   
-  case class Typd[T](obj: T, typ: Type) extends Stmt {
+  case class Typd[T](obj: T, typ: Type) { //extends Stmt {
     
     override def toString =
       if (showTypes) s"$obj: $typ"

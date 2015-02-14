@@ -21,7 +21,7 @@ self: Stage =>
   
 //  case class Binding(nam: VId, value: Term) extends Stmt
   case class Binding(loc: Local, value: Term) extends Stmt
-  case class Block(stmts: Seq[Stmt], ret: Term) extends BasicExpr
+  case class Block(stmts: Seq[Eit[Term,Binding]], ret: Term) extends BasicExpr
   
   case class IntLit(value: Int) extends BasicExpr
   case class IntOp(lhs: Term, rhs: Term, op: (Int, Int) => Int) extends BasicExpr
@@ -45,7 +45,11 @@ self: Stage =>
         fname(f) + mkTyps(targs) + mkRegs(rargs) + mkArgs(args,true) //s"${fname(f)}${mkArgs}"
       case Build(typ, args) =>
         "new " + typ + mkArgs(args) //s"${fname(f)}${mkArgs}"
-      case Block(stmts, ret) => s"{${stmts map (_.toString+"; ") mkString}$ret}"
+//      case Block(stmts, ret) => s"{${stmts map (_.toString+"; ") mkString}$ret}"
+      case Block(stmts, ret) => s"{${stmts map {
+        case Left(t) => t.toString+"; "
+        case Right(b) => b.toString+"; "
+      } mkString}$ret}"
       case IntLit(n) => n.toString
       case IntOp(a, b, op) => s"[iop]($a,$b)"
       case Ite(c,t,e) => s"if $c then $t else $e"
@@ -56,7 +60,6 @@ self: Stage =>
     }
     
   }
-  
   
 }
 

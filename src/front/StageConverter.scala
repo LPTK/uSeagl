@@ -75,7 +75,7 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
     case a.IntOp(a,b,o) => IntOp(terms(a),terms(b),o)
     case a.Var(vs) => Var(vars(vs))
 //    case a.Block(s,e) => Block(s map apply, terms(e))
-    case a.Block(s,e) => Block(s map apply, terms(e))
+    case a.Block(s,e) => Block(s map { case Left(t) => Left(terms(t)) case Right(b) => Right(apply(b)) }, terms(e))
     case a.Ite(c,t,e) => Ite(terms(c),terms(t),terms(e))
     case a.Build(t,a) => Build(apply(t), a map terms)
     case a.FCall(fs,ta,ra,a) => FCall(funs(fs), ta map apply, ra, a map terms)

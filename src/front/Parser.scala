@@ -85,7 +85,8 @@ object Parser extends StandardTokenParsers with regex.RegParser {
     )
   }
   
-  def stmt: Parser[Stmt] = bind | expr
+//  def stmt: Parser[Stmt] = bind | expr
+  def stmt: Parser[Eit[Term,Binding]] = (bind ^^ Right.apply) | (expr ^^ Left.apply)
   
 //  def bind: Parser[Binding] = {(varname ~ ("=" ~> expr)) ^^ {
 //    case id ~ e => Binding(id, e)
