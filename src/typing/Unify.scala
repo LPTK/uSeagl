@@ -21,19 +21,30 @@ class Unify2(val ag: Aggregate) extends Types.singleStaged.Identity with StageId
   
   override val state = ag.state
   
-  sealed trait QualType { def map(f: Type => Type): QualType }
-  case class Strong(typ: Type) extends QualType { def map(f: Type=>Type) = Strong(f(typ)) }
-  case class Weak(typ: Type) extends QualType { def map(f: Type=>Type) = Weak(f(typ)) }
-  case class Field(typ: Type, id: VId) extends QualType { def map(f: Type=>Type) = Field(f(typ), id) }
+//  sealed trait QualType { def map(f: Type => Type): QualType }
+//  case class Strong(typ: Type) extends QualType { def map(f: Type=>Type) = Strong(f(typ)) }
+//  case class Weak(typ: Type) extends QualType { def map(f: Type=>Type) = Weak(f(typ)) }
+//  case class Field(typ: Type, id: VId) extends QualType { def map(f: Type=>Type) = Field(f(typ), id) }
   
-  val subs = mutable.Map[AbsTyp, QualType]()
+  val subs = mutable.Map[AbsTyp, Type]()
   
 //  println(ag.cstrs)
-  println(s"${ag.cstrs.hard_cstrs mkString ", "} - ${ag.cstrs.soft_cstrs mkString ", "} - ${ag.cstrs.field_cstrs mkString ", "}")
+//  println(s"${ag.cstrs.hard_cstrs mkString ", "} - ${ag.cstrs.soft_cstrs mkString ", "} - ${ag.cstrs.field_cstrs mkString ", "}")
   
   val hc = ag.cstrs.hard_cstrs.clone
   val sc = ag.cstrs.soft_cstrs.clone
   val fc = ag.cstrs.field_cstrs.clone
+  
+  def printCstrs = {
+//    def p[T](t: Traversable[T]) = 
+    println(s"${
+      hc map { case(a,b) => s"$a = $b" 
+    } mkString " , "}  -  ${
+      sc map { case(a,b) => s"$a ~ $b" 
+    } mkString " , "}  -  ${
+      fc map { case(a,f,b) => s"$a.$f = $b" 
+    } mkString " , "}")
+  }
 //  hc map {
 //    case (TType(at: AbsTyp, targs, rargs), t2) =>
 //      assert(targs == Seq() && rargs == Seq(), "no support for parametrized abs types")
@@ -49,6 +60,12 @@ class Unify2(val ag: Aggregate) extends Types.singleStaged.Identity with StageId
 //      subs(t2) = Field(t1,id)
 //  }
   
+  printCstrs
+  
+  private var bindedElem = None: Opt[(AbsTyp,Type)]
+  def noCycle[T](at: AbsTyp, t: Type)(f: => T) =
+    try { bindedElem = Some(at,t); f } finally bindedElem = None
+  
 //  while (!hc.isEmpty || !sc.isEmpty || !fc.isEmpty) {
   while (!hc.isEmpty || !sc.isEmpty) {
 //    val (t1,t2)
@@ -62,19 +79,19 @@ class Unify2(val ag: Aggregate) extends Types.singleStaged.Identity with StageId
       case (TType(at: AbsTyp, Seq(), Seq()), t2) => subs.get(at) match {
 //        case None if at =/= t2.t.value =>
         case None if t2.t.value =/= at =>
-          subs(at) = Strong(t2)  // Strong(apply(t2))
+          subs(at) = t2  // Strong(apply(t2))
 //          for (i <- hc.indices) hc(i) = (apply(hc(i)._1), apply(hc(i)._2))
-          subs.transform{ case(at,qt) => qt map apply }
+          subs.transform{ case(at,qt) => noCycle(at,qt){ apply(qt) } }
           println(hc.mkString(", ") + "  " + subs)
         case None =>
-        case Some(Strong(t)) =>
+        case Some(t) =>
 //          hc += (apply(t) -> apply(t2))
           val b @ (x,y) = (apply(t) -> apply(t2))
           if (x =/= y) hc += b
 //          println(t,t2,b)
 //          if (x =/= y && y =/= t) hc += b
 //          println(hc)
-        case Some(_) => ???
+//        case Some(_) => ???
       }
       
       case (TType(_: AbsTyp, _, _), _) => wth("no support for parametrized abs types")
@@ -90,13 +107,15 @@ class Unify2(val ag: Aggregate) extends Types.singleStaged.Identity with StageId
     sc.transform{ case(t1,t2) => (apply(t1),apply(t2)) }
     fc.transform{ case(t1,id,t2) => (apply(t1),id,apply(t2)) }
     
+    printCstrs
+    
     if (!sc.isEmpty) sc.remove(sc.size-1) match {
       case (TType(RefTyp, Seq(t1), _), TType(RefTyp, Seq(t2), _)) => sc += (t1 -> t2)
       case (TType(RefTyp, Seq(t1), _), t2) => hc += (t1 -> t2)
       case (t1, TType(RefTyp, Seq(t2), _)) => hc += (t1 -> t2)
       case (t1, t2) => hc += (t1 -> t2)
 //        println(t1,t2,RefTyp,t1.t == RefTyp)
-        println(t1.t,RefTyp,t1.t.value == RefTyp.value)
+//        println(t1.t,RefTyp,t1.t.value == RefTyp.value)
     }
     
 //    for (i <- fc.indices) fc(i) match {
@@ -129,9 +148,11 @@ class Unify2(val ag: Aggregate) extends Types.singleStaged.Identity with StageId
   /** Note: does not handle abs types with typ args */
   override def apply(x: Type) = (x.t.value match {
 //    case at: AbsTyp if subs isDefinedAt at => subs(at)
+    case at: AbsTyp if bindedElem map (_._1 === at) getOrElse false =>
+      throw CompileError(s"Cyclic unification with $at and ${bindedElem.get._2}")
     case at: AbsTyp =>
       subs.get(at) match {
-        case Some(Strong(t)) =>
+        case Some(t) =>
 //          println(s"rep $at -> $t")
           t
         case _ => x
