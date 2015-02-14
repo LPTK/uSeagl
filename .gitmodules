@@ -1,0 +1,3 @@
+[submodule "Scala-Common"]
+	path = Scala-Common
+	url = git@github.com:LPTK/Scala-Common.git
