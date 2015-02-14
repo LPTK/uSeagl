@@ -20,6 +20,10 @@ object REPL extends App {
   val ty = new Typing(rs)
   val ex = new Exec
   
+  val pt = new Pretype(rs)
+  val ag = new Aggregate(pt)
+  
+  
   val ctx = collection.mutable.HashMap[VId,Value]()
   
   def rep {
@@ -66,20 +70,24 @@ object REPL extends App {
         val r = rs(f)
 //        println(r)
         
-        val t = ty(r)
+//        val t = ty(r)
+        val t = ag.renew(pt(r))
         println(t)
         
       case Success(typ: Typ, _) =>
-//        println(ty(rs(ps(typ))))
-        val t = ty(rs(ps(typ)))
-        ty.flushChecks
+////        println(ty(rs(ps(typ))))
+//        val t = ty(rs(ps(typ)))  
+//        ty.flushChecks
+        val t = ag.renew(pt(rs(ps(typ))))
         println(t)
       
       case Success(e: Expr, _) =>
         val re = rs(ps(e))
 //        println("Typed: " + ty.terms(re))
-        val te = ty.typeUnify(re)
-        println("Typed: " + te.typ)
+        
+//        val te = ty.typeUnify(re)
+//        println("Typed: " + te.typ)
+
         val r = ex(re, ctx toMap)
         println(ex.h.dispVal(r))
         ex.h.dealloc(r)
@@ -89,8 +97,12 @@ object REPL extends App {
 //        ctx(id) = ex(rs(ps(value)))
 //        println(ctx(id))
 //        val a = rs(ps(value))
-        val Resolved.Binding(id, v) = rs(ps(b))
-        val tv = ty.typeUnify(v)
+        val rb @ Resolved.Binding(loc, v) = rs(ps(b))
+        val id = loc.nam
+        
+//        val tv = ty.typeUnify(rb)
+        // TODO print type
+        
         val xv = ex(v, ctx toMap)
         if (ctx isDefinedAt id)
           ex.h.dealloc(ctx(id))

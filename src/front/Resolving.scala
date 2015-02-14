@@ -99,10 +99,12 @@ class Presolve extends StageConverter(Ast, Resolving) {
 //    super.apply(x)
 //  } and { popCtx; ctx(x.nam) = _ }
   
+//  override def apply(x: a.Binding) =
+////    super.apply(x) and (ctx(x.nam) = (_:Binding).value)
+////    super.apply(x) and ((b:Binding) => ctx(x.nam) = Local(x.nam, b.value))
+//    super.apply(x) oh_and (ctx(x.nam) = Local(new VUid, x.nam, None))
   override def apply(x: a.Binding) =
-//    super.apply(x) and (ctx(x.nam) = (_:Binding).value)
-//    super.apply(x) and ((b:Binding) => ctx(x.nam) = Local(x.nam, b.value))
-    super.apply(x) oh_and (ctx(x.nam) = Local(new VUid, x.nam, None))
+    super.apply(x) and (b => ctx(x.loc.nam) = b.loc) // should probably do this ctx update in apply Local
   
   override def apply(x: a.Expr): Expr = x match {
     case a.Block(s,e) =>
@@ -116,18 +118,19 @@ class Presolve extends StageConverter(Ast, Resolving) {
 class Resolve(ps: Presolve) extends StageConverter(Resolving, Resolved) {
   import b._
   
-  val btyps = ps.btyps map getUnique // apply
-  val bfuns = ps.bfuns map getUnique
+  val btyps = ps.btyps map apply //ps.btyps map getUnique // apply
+  val bfuns = ps.bfuns map (_ value) map apply //getUnique
   
-  def typs(x: a.TypSym) = getUnique(x.get) //apply(x.get) //x.get flatMap apply
-  def funs(x: a.FunSym) = getUnique(x.get)
+  def typs(x: a.TypSym) = apply(x.get)//getUnique(x.get) //apply(x.get) //x.get flatMap apply
+  def funs(x: a.FunSym) = apply(x.get) //getUnique(x.get)
 //    Lazy(apply(x.get))
 //    apply(new Cyclic[a.Fun](_ => x.get))
   def vars(x: a.VarSym) = apply(x.get) //apply(x.get) //x.get flatMap apply
   def terms(x: a.Term)  = apply(x)
   
   def tspec(x: a.TypeSpec) = x map apply
-  def tparam(x: a.TypeParam) = getUnique(x).value.asInstanceOf[AbsTyp] // TODO make cleaner // apply(x)
+//  def tparam(x: a.TypeParam) = getUnique(x).value.asInstanceOf[AbsTyp] // TODO make cleaner // apply(x)
+  def tparam(x: a.TypeParam) = apply(x:a.Typ).value.asInstanceOf[AbsTyp] // TODO make cleaner // apply(x)
   
   
   

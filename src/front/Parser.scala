@@ -87,8 +87,11 @@ object Parser extends StandardTokenParsers with regex.RegParser {
   
   def stmt: Parser[Stmt] = bind | expr
   
-  def bind: Parser[Binding] = {(varname ~ ("=" ~> expr)) ^^ {
-    case id ~ e => Binding(id, e)
+//  def bind: Parser[Binding] = {(varname ~ ("=" ~> expr)) ^^ {
+//    case id ~ e => Binding(id, e)
+//  }}
+  def bind: Parser[Binding] = {(param ~ ("=" ~> expr)) ^^ {
+    case loc ~ e => Binding(loc, e)
   }}
   
 //  def block: Parser[Block] = ("{" ~> repsep(stmt,";") <~ "}") ^^ {

@@ -1,8 +1,11 @@
 package common
 
+import util._
+
 case class CyclicDependency() extends Exception("Illegal cyclic access")
 
-class Cyclic[+T](expr: Cyclic[T] => T, toStr: T => String = ((t:T) => t.toString)) extends Unique {
+//class Cyclic[+T](expr: Cyclic[T] => T, toStr: T => String = ((t:T) => t.toString)) { //extends Unique {
+class Cyclic[+T](expr: Cyclic[T] => T, eqt: Opt[(T,Any) => Bool] = None, toStr: T => String = ((t:T) => t.toString)) { //extends Unique {
   def this(x: T) = this(_ => x)
   
   private val _value = expr(this)
@@ -15,6 +18,18 @@ class Cyclic[+T](expr: Cyclic[T] => T, toStr: T => String = ((t:T) => t.toString
   override def toString =
     if (_value == null) "[Cyclic in resolution]"
     else toStr(value)
+  
+//  /** should not be default behavior; will diverge for classes with strcl eq */
+//  override def equals(x: Any) = x match {
+//      case Cyclic(x) => this == x
+//      case _ => this == x
+//  }
+  override def equals(x: Any) = (eqt,x) match {
+      case (Some(eqt), Cyclic(x)) => eqt(value, x)
+      case (Some(eqt), _) => eqt(value, x)
+      case _ => super.equals(x) // referential equality
+  }
+  
 }
 
 object Cyclic {

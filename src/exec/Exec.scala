@@ -138,7 +138,7 @@ class Exec {
         
       /** At block exit, every (local) temporary is deallocated, as well as intermediate exprs */
       case Block(stmts, e) => stmts match {
-        case Seq(Binding(id,e2), rest @ _*) =>
+        case Seq(Binding(Local(_,id,_),e2), rest @ _*) =>
           val (p,t) = rec(e2)
           val (p2,t2) = rec(Block(rest, e))(g + (id -> p)) + t
 //          h.dealloc(p)

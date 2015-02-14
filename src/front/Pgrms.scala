@@ -35,8 +35,8 @@ class VUid extends Uid
 trait Pgrms {
 self: Stage =>
   
-//  val dispIds = false
-  val dispIds = true
+  val dispIds = false
+//  val dispIds = true
   
   case class Pgrm(typs: Map[Id,ConcTyp], funs: Map[Id,Fun])
   
@@ -85,6 +85,9 @@ self: Stage =>
       body: Term
 //  ) extends Decl with Parmzd with Unique {
   ) extends Decl with Parmzd {
+    
+    def mkNew = Fun(new FUid, nam, typs, regs, params, ret, spec, body)
+    
     override def toString = "fun " + nam + mkTyps(typs map tpname) +
       mkRegs(regs) + mkArgs(params,true) + s": $ret = $body"
   }

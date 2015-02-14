@@ -19,7 +19,8 @@ self: Stage =>
   
   case class Build(typ: Type, args: Seq[Term]) extends BasicExpr
   
-  case class Binding(nam: VId, value: Term) extends Stmt
+//  case class Binding(nam: VId, value: Term) extends Stmt
+  case class Binding(loc: Local, value: Term) extends Stmt
   case class Block(stmts: Seq[Stmt], ret: Term) extends BasicExpr
   
   case class IntLit(value: Int) extends BasicExpr

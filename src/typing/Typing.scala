@@ -21,7 +21,8 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
   import mutable.ArrayBuffer
   import mutable.HashMap
   
-  val btyps = rs.btyps map (t => getUnique(t.value))
+//  val btyps = rs.btyps map (t => getUnique(t.value))
+  val btyps = rs.btyps map (t => apply(t: a.Typ))
   
 //  val allTyps = HashMap[Typ, Cyclic[Typ]]()
   
@@ -226,7 +227,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
     def mkAbsType = {
 //      Type(new Cyclic(AbsTyp(ctx.nextId, Seq(), Seq(), false) and (absTyps += _)), Seq(), Seq())
       val at = AbsTyp(new TUid, ctx.nextId, Seq(), Seq(), false)
-      println(s"mk $at")
+//      println(s"mk $at")
 //      if (at.uid.id == 74) ???
       absTyps += at
 //      Type(new Cyclic(at) and (ct => allTyps += (at -> ct)), Seq(), Seq())
@@ -252,16 +253,22 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
   }
   
   
-//  def typeUnify(e: a.Expr) = {  // typeContained
-//    pushCtx
-//    terms(e)
-//  } oh_and popCtx
-  def typeUnify(e: a.Expr) = {
-    val es = Seq()
-    val Fun(uid, nam, typs, regs, params, ret, spec, body) =
-      apply(a.Fun(new FUid, FId("[internal]"), es, es, es, None, Specs.Spec.empty, e))
-    body
-  }
+////  def typeUnify(e: a.Expr) = {  // typeContained
+////    pushCtx
+////    terms(e)
+////  } oh_and popCtx
+//  def typeUnify(e: a.Expr) = {
+//    val es = Seq()
+//    val Fun(uid, nam, typs, regs, params, ret, spec, body) =
+//      apply(a.Fun(new FUid, FId("[internal]"), es, es, es, None, Specs.Spec.empty, e))
+//    body
+//  }
+//  def typeUnify(b: a.Binding) = {
+//    val es = Seq()
+//    val Fun(uid, nam, typs, regs, params, ret, spec, body) =
+//      apply(a.Fun(new FUid, FId("[internal]"), es, es, es, b.loc.typ, Specs.Spec.empty, b.value))
+//    body
+//  }
   
   
   
@@ -309,7 +316,7 @@ class Typing(rs: Resolve) extends StageConverter(Resolved, Typed) {
 //        ctx += (args(i).typ -> transType(t.params(i).typ))
 //      fromGenArgs
 //    }
-    def retType = transType(typ)
+    def retType = transType(typ) // should not be translation here!
     
   }
   
