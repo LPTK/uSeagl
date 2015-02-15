@@ -123,7 +123,7 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
   override def fctComputed(k: a.Fun, x: Cyclic[Fun]) = {
 //    new Unify2(this).getUnique(x) oh_and popCtx
 //    println(x)
-    new Unify2(this)(x) oh_and popCtx
+    new Unify(this)(x) oh_and popCtx
   }
   
   
@@ -186,6 +186,8 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
     
   }
   
+  // not used (yet?):
+  case class TypeMismatch(found: Type, req: Type) extends Reporting.CompileError(s"type mismatch: found $found, expected $req")
   
 }
 

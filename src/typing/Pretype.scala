@@ -153,11 +153,10 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
   def pushCtx { ctx = Ctx(Some(ctx)) }
   def popCtx  { ctx = ctx.parent.get }
   
+  
   object TType {
     def unapply(typ: Type) = Some(typ.t.value, typ.targs, typ.rargs)
   }
-  
-  
   implicit class TType(self: Type) extends Inst {
     import self._
     
