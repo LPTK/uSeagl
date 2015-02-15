@@ -19,6 +19,12 @@ abstract class StageState[S <: Stage](val s: S) {
   var renewed = None: Opt[mutable.Set[Any]]
 }
 
+/**
+ * TODO:
+ *  encapsulate mutability with (implicit c: Ctx) params
+ *  and externalize state storage/management
+ *  
+ */
 abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   import b._
   
@@ -29,6 +35,14 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
     val varTable = HashMap[VUid, s.Local]()
   }
   import state._
+  
+  
+////  type Ctx <: StageState[b.type]
+////  case class Ctx[+P](parent: Opt[Ctx[P]] = None) {
+//  case class Ctx(st: StageState[b.type], pl: Payload, parent: Opt[Ctx] = None) {
+//    def mkChild(pl: Payload) = Ctx(st, pl, Some(this))
+//  }
+//  type Payload
   
   
   /** Delayed checking useful for avoiding illegal cyclic dependencies */
@@ -52,8 +66,9 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   
 //  private var renewed = None: Opt[mutable.Set[Any]]
   def isRenewed(x: Any): Bool = renewed map (_ apply x) getOrElse true
-  def renewTree[T](f: => T) = try { renewed = Some(mutable.HashSet()); f }
-  finally { renewed = None }
+  def renewTree[T](f: => T) =
+    try { renewed = Some(mutable.HashSet()); f }
+    finally { renewed = None }
   
   
   /** Polymorphic definitions */

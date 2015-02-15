@@ -9,8 +9,9 @@ import Regions._
 
 /**
  * TODO:
- *   before typing, put in flat form; easier to deal with tempos' regions
- *   
+ *  - before typing, put in flat form; easier to deal with tempos' regions
+ *  - prevent region name clashes (args, locs, etc)
+ *  
  */
 class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
   import b._
@@ -55,6 +56,7 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
         ref(r.asInstanceOf[Var].sym.typ, vs.nam)
       case a.Block(s,e) => //c[Block](r).ret.typ //terms(e).typ
         val Block(s,e) = r
+        // TODO check no regions escape!
         e.typ
       case a.Ite(c,t,e) => ctx.mkAbsType
       case b: a.Build =>
@@ -75,10 +77,12 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
         val FCall(f, targs, rargs, args) = r
         if (targs.size > fc.f.typs.size)
           throw CompileError(s"Too many type arguments in call $fc")
-        r = FCall(f, targs ++ (for (i <- targs.size until fc.f.typs.size) yield ctx.mkAbsType), rargs, args)
+        val fc2 = FCall(f, targs ++ (for (i <- targs.size until fc.f.typs.size) yield ctx.mkAbsType), rargs, args)
+        r = fc2
         if (!f.wasComputerYet && fc.f.value.typs.size > 0 && !fc.f.value.ret.isComplete)
 //          throw CompileError(s"Recursive-polymorphic function needs complete return type specified: ${fc.f.nam}")
           throw CompileError(s"Function '${fc.f.nam}' with polymorphic recursion (explicit type parameters) needs return type completely specified")
+        if (!f.wasComputerYet) ctx.recCalls += fc2
         ctx.mkAbsType // can't know in advance the type of the return; add cstr later
       case a.FieldAccess(e, id) => // TODO handle refs
 //        val FieldAccess(e, id) = r
@@ -87,7 +91,7 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
 //          case ct @ ConcTyp(_, _, typs, regs, params) => RefType(typ.fieldType(id), Reg.empty)
 //          case at : AbsTyp => throw CompileError(s"Unknown field access _.$id on abstract type $at")
 //        }
-        ref(ctx.mkAbsType, VId("??")) // TODO handle region
+        ref(ctx.mkAbsType, VId("?."+id)) // TODO handle region
       case a.FieldAssign(e, id, v) => UnitType
     }
     Typd(r, t)
@@ -132,6 +136,7 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
   
   case class Ctx (parent: Option[Ctx]) {
     val absTyps = ArrayBuffer[AbsTyp]()
+    val recCalls = ArrayBuffer[FCall]()
     def mkAbsType = {
 //      Type(new Cyclic(AbsTyp(ctx.nextId, Seq(), Seq(), false) and (absTyps += _)), Seq(), Seq())
       val at = AbsTyp(new TUid, ctx.nextId, Seq(), Seq(), false)
@@ -148,6 +153,13 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
       val letter = (absTypId % 26 + 'A').toChar
       TId(s"'$letter" + (if (absTypId > 26) (absTypId/26) else ""))
     } oh_and (absTypId += 1)
+    
+    var tmpTypId = 0
+    def nextTmpId = {
+      val letter = (tmpTypId % 26 + 'a').toChar
+      TId(s"tmp$$$letter" + (if (absTypId > 26) (tmpTypId/26) else ""))
+    } oh_and (tmpTypId += 1)
+    
   }
   private var ctx = Ctx(None)
   def pushCtx { ctx = Ctx(Some(ctx)) }

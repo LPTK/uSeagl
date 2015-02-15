@@ -24,7 +24,8 @@ object REPL extends App {
   val ag = new Aggregate(pt)
   
   
-  val ctx = collection.mutable.HashMap[VId,Value]()
+//  val ctx = collection.mutable.HashMap[VId,Value]()
+  val ctx = collection.mutable.HashMap[VId,(Typed.Type,Value)]()
   
   def rep {
     
@@ -52,7 +53,7 @@ object REPL extends App {
         case "h" =>
           println(ex.h)
         case "c" =>
-          println("Locals:\n " + ctx.mkString("\n  "))
+          println("Locals:\n  " + ctx.mapValues{case(t,v) => s"$v : $t"}.mkString("\n  "))
           println("Types:\n  " + ag.state.typTable.values.collect{case Cyclic(ct: Typed.ConcTyp) => ct}.mkString("\n  "))
           println("Funs:\n  " + ag.state.funTable.values.filter{_.nam =/= ag.IntlFId}.mkString("\n  "))
         case _ => println(s"Unknown command :$c")
@@ -89,7 +90,7 @@ object REPL extends App {
         val te = ag.typeUnify(re)
         println("Typed: " + te.typ)
 
-        val r = ex(re, ctx toMap)
+        val r = ex(re, ctx.mapValues(_ _2) toMap)
         println(ex.h.dispVal(r))
         ex.h.dealloc(r)
         // TODO put in ctx
@@ -102,14 +103,15 @@ object REPL extends App {
         val id = loc.nam
         
 //        val tv = ty.typeUnify(rb)
-        // TODO print type
+        val tv = ag.typeUnify(rb)
+        println("Typed: " + tv.typ)
         
-        val xv = ex(v, ctx toMap)
+        val xv = ex(v, ctx.mapValues(_ _2) toMap)
         if (ctx isDefinedAt id)
-          ex.h.dealloc(ctx(id))
-        ctx(id) = xv
+          ex.h.dealloc(ctx(id)._2)
+        ctx(id) = tv.typ -> xv
 //        println(v)
-        println(s"$id: ${ex.h.dispVal(ctx(id))}")
+        println(s"$id: ${ex.h.dispVal(ctx(id)._2)}")
       
       case f: Failure =>
         println(f)
