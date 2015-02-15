@@ -59,7 +59,7 @@ object Parser extends StandardTokenParsers with regex.RegParser {
   
   def spec: Parser[Spec] = 
     ("@read" ~> reg) ~ ("@inval" ~> reg) ~ ("@trans" ~> repsep(trans,",")) ^^ {
-    case r ~ i ~ t => Spec(XReg(r),XReg(i),t)
+    case r ~ i ~ t => Spec(Reg(r),Reg(i),t)
   }
   
 //  def a = ("=>" | "->") ~ reg
@@ -74,7 +74,7 @@ object Parser extends StandardTokenParsers with regex.RegParser {
     ((regi <~ "=>") ~ regi) ^^ { case f~t => Trans(f,t,false) } |
     ((regi <~ "->") ~ regi) ^^ { case f~t => Trans(f,t,true)  }
   ;
-  def regi = reg ^^ (XReg.apply)
+  def regi = reg ^^ (Reg.apply)
   
   def decl: Parser[Decl] = typ | fun
   

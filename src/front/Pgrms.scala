@@ -65,6 +65,11 @@ self: Stage =>
   
   case class ConcTyp(uid: TUid, nam: TId, typs: Seq[TypeParam], regs: Seq[VId], params: Seq[Local]) extends Decl with Typ {
     def getField(id: VId) = params.find (_.nam === id)
+    
+//    override def equals(that: Any) = that match {
+//      case that: ConcTyp => that.uid === uid // Note: this is because transformations can duplicate Cyclic[Type] objects, which use unique
+//      case _ => false
+//    }
   }
 
   case class AbsTyp(uid: TUid, nam: TId, typs: Seq[TypeParam], regs: Seq[VId], userDefined: Bool) extends Typ
@@ -94,7 +99,7 @@ self: Stage =>
   
   
   /** will incorporate more complex info, eg: cross-scoping info (?) */
-  case class Local(uid: VUid, nam: VId, typ: TypeSpec) extends Unique {
+  case class Local(uid: VUid, nam: VId, typ: TypeSpec) { //extends Unique {
     override def toString = s"$nam: $typ"
   }
   

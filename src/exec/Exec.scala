@@ -146,7 +146,7 @@ class Exec {
 //          t2 foreach h.dealloc
           h.dealloc(t2 :+ p)
           (p2,E)
-        case Seq(ex: Expr, rest @ _*) =>
+        case Seq(Left(ex: Expr), rest @ _*) =>
           val (p,t) = rec(ex)
           val (p2,t2) = rec(Block(rest, e))
 //          h.dealloc(p)

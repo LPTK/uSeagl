@@ -47,18 +47,19 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
   
   def terms(x: a.Term) = {
     var r = super.apply(x)
-    val t = x match {
-      case a.NilExpr => ctx.mkAbsType
-      case a.IntLit(n) => IntType
-      case a.IntOp(a,b,o) => IntType
+    val (t, reg) = x match {
+//    val (t: Type, reg: Reg) = x match {
+      case a.NilExpr => (ctx.mkAbsType, Reg.empty)
+      case a.IntLit(n) => (IntType, ctx.mkTmpReg)
+      case a.IntOp(a,b,o) => (IntType, ctx.mkTmpReg)
       case a.Var(vs) => //ctx.mkAbsType //ref(apply(vs).typ, vs.nam)
 //        ref(ctx.mkAbsType, vs.nam)
         ref(r.asInstanceOf[Var].sym.typ, vs.nam)
       case a.Block(s,e) => //c[Block](r).ret.typ //terms(e).typ
         val Block(s,e) = r
         // TODO check no regions escape!
-        e.typ
-      case a.Ite(c,t,e) => ctx.mkAbsType
+        (e.typ, e.reg)
+      case a.Ite(c,t,e) => (ctx.mkAbsType, ctx.mkTmpReg)
       case b: a.Build =>
         b.typ.t.value match {
           case a.ConcTyp(_, _, _, _, fs) if b.args.size != fs.size =>
@@ -67,7 +68,7 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
             throw CompileError(s"Cannot construct abstract type $at")
           case _ =>
         }
-        r.asInstanceOf[Build].typ
+        (r.asInstanceOf[Build].typ, ctx.mkTmpReg)
 //      case fc: a.FCall =>
       case fc: a.FCall =>
 //      case fc @ a.FCall(f, targs, rargs, args) =>
@@ -83,7 +84,7 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
 //          throw CompileError(s"Recursive-polymorphic function needs complete return type specified: ${fc.f.nam}")
           throw CompileError(s"Function '${fc.f.nam}' with polymorphic recursion (explicit type parameters) needs return type completely specified")
         if (!f.wasComputerYet) ctx.recCalls += fc2
-        ctx.mkAbsType // can't know in advance the type of the return; add cstr later
+        (ctx.mkAbsType, ctx.mkAbsReg) // can't know in advance the type of the return; add cstr later
       case a.FieldAccess(e, id) => // TODO handle refs
 //        val FieldAccess(e, id) = r
 //        val typ = e.typ.valType
@@ -91,10 +92,11 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
 //          case ct @ ConcTyp(_, _, typs, regs, params) => RefType(typ.fieldType(id), Reg.empty)
 //          case at : AbsTyp => throw CompileError(s"Unknown field access _.$id on abstract type $at")
 //        }
-        ref(ctx.mkAbsType, VId("?."+id)) // TODO handle region
-      case a.FieldAssign(e, id, v) => UnitType
+        val FieldAccess(e, id) = r
+        ref(ctx.mkAbsType, e.reg ~ Reg(id)) // TODO handle region
+      case a.FieldAssign(e, id, v) => (UnitType, ctx.mkTmpReg)
     }
-    Typd(r, t)
+    Typd(r, t, reg)
   }
   
   
@@ -154,11 +156,25 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
       TId(s"'$letter" + (if (absTypId > 26) (absTypId/26) else ""))
     } oh_and (absTypId += 1)
     
-    var tmpTypId = 0
-    def nextTmpId = {
-      val letter = (tmpTypId % 26 + 'a').toChar
-      TId(s"tmp$$$letter" + (if (absTypId > 26) (tmpTypId/26) else ""))
-    } oh_and (tmpTypId += 1)
+//    var tmpVarId = 0
+//    def nextTmpId = {
+//      val letter = (tmpVarId % 26 + 'a').toChar
+//      VId(s"tmp$$$letter" + (if (tmpVarId > 26) (tmpVarId/26) else ""))
+//    } oh_and (tmpVarId += 1)
+//    
+//    var absRegId = 0
+//    def mkAbsReg = Reg(VId("r"+absRegId)) oh_and (absRegId += 1)
+    
+    var tmpRegId = 0
+    def mkTmpReg = Reg(VId("$tmp"+tmpRegId)) oh_and (tmpRegId += 1)
+    
+    var absVarId = 0
+    def nextVarId = {
+      val letter = (absVarId % 26 + 'a').toChar
+      VId(s"'$letter" + (if (absVarId > 26) (absVarId/26) else ""))
+    } oh_and (absVarId += 1)
+    
+    def mkAbsReg = Reg(nextVarId)
     
   }
   private var ctx = Ctx(None)
@@ -166,9 +182,7 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
   def popCtx  { ctx = ctx.parent.get }
   
   
-  object TType {
-    def unapply(typ: Type) = Some(typ.t.value, typ.targs, typ.rargs)
-  }
+  
   implicit class TType(self: Type) extends Inst {
     import self._
     
@@ -183,6 +197,19 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
     }
     
   }
+  
+  object TType {
+    def unapply(typ: Type) = Some(typ.t.value, typ.targs, typ.rargs)
+  }
+  
+  object TRef {
+    def unapply(typ: Type) = typ match {
+      case TType(RefTyp, Seq(t), Seq(r)) => Some(t,r)
+      case _ => None
+    }
+  }
+  
+  
   
   implicit class TaType(self: a.TypeSpec) {
     import self._
@@ -203,11 +230,13 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
     
   }
   
-  def ref(typ: Type, nam: VId) = typ match {
-    case Type(Cyclic(RefTyp), _, _) =>
-      typ
-    case _ => RefType(typ, Reg(nam))
-  }
+  def ref(typ: Type, reg: Reg): (Type, Reg) = typ match {
+    case Type(Cyclic(RefTyp), _, Seq(r)) =>
+      (typ, r)
+    case _ => (RefType(typ, reg), reg)
+  }  
+  def ref(typ: Type, nam: VId): (Type, Reg) = ref(typ, Reg(nam))
+  
   
   
   

@@ -13,7 +13,13 @@ import collection._
 
 /**
  * TODO
- *  coalesce Ref[Ref] into Ref and Ref[Int] into Int
+ *  coalesce Ref[Ref] into Ref and  >> Ref[Int] into Int <<
+ * 
+ * 
+ * Notes
+ * - can't currently call functions with ref params, even with a ref argument
+ *   reason is we coalesce ref args without first seeing if they fit, which would entail a form of backtracking
+ * 
  * 
  */
 class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIdentDefs {
@@ -31,6 +37,7 @@ class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIde
 //  case class Field(typ: Type, id: VId) extends QualType { def map(f: Type=>Type) = Field(f(typ), id) }
   
   val subs = mutable.Map[AbsTyp, Type]()
+  val regSubs = mutable.Map[Sym, Reg]()
   
 //  println(ag.cstrs)
 //  println(s"${ag.cstrs.hard_cstrs mkString ", "} - ${ag.cstrs.soft_cstrs mkString ", "} - ${ag.cstrs.field_cstrs mkString ", "}")
@@ -38,6 +45,8 @@ class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIde
   val hc = ag.cstrs.hard_cstrs.clone
   val sc = ag.cstrs.soft_cstrs.clone
   val fc = ag.cstrs.field_cstrs.clone
+  
+  val rc = ag.cstrs.reg_cstrs.clone
   
   def printCstrs = {
 //    def p[T](t: Traversable[T]) = 
@@ -106,6 +115,7 @@ class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIde
         if (t1 =/= t2) throw UnificationError(t1,t2)
 //        if (t1 =/= t2) throw UnificationError(tt1,tt2)
         (targs1 zip targs2) map hc.+=
+        (rargs1 zip rargs2) map rc.+=
     }
     
     sc.transform{ case(t1,t2) => (apply(t1),apply(t2)) }
@@ -114,9 +124,9 @@ class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIde
     printCstrs
     
     if (!sc.isEmpty) sc.remove(sc.size-1) match {
-      case (TType(RefTyp, Seq(t1), _), TType(RefTyp, Seq(t2), _)) => sc += (t1 -> t2)
+//      case (TType(RefTyp, Seq(t1), _), TType(RefTyp, Seq(t2), _)) => sc += (t1 -> t2)
       case (TType(RefTyp, Seq(t1), _), t2) => hc += (t1 -> t2)
-      case (t1, TType(RefTyp, Seq(t2), _)) => hc += (t1 -> t2)
+//      case (t1, TType(RefTyp, Seq(t2), _)) => hc += (t1 -> t2)
       case (t1, t2) => hc += (t1 -> t2)
 //        println(t1,t2,RefTyp,t1.t == RefTyp)
 //        println(t1.t,RefTyp,t1.t.value == RefTyp.value)
@@ -135,7 +145,8 @@ class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIde
         ct.getField(f) match {
           case Some(loc) =>
 //            hc += 
-            sc += (tt.transType(loc.typ) -> tf)
+//            sc += (tt.transType(loc.typ) -> tf)
+            sc += (tf -> tt.transType(loc.typ))
           case None =>
             throw CompileError(s"Type ${ct} has no field $f")
         }
@@ -148,6 +159,26 @@ class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIde
   
   debug(subs)
   
+//  def unifRegs(s: Sym, r: Reg) {
+//  }
+  for (regs <- rc) regs match {
+    case (AbsReg(ar), r) => regSubs += (ar -> r) //unifRegs(ar,r)
+    case (r, AbsReg(ar)) => regSubs += (ar -> r)
+    case (r1, r2) =>
+      if (r1 =/= r2) throw CompileError(s"Cannot unify regions <$r1> and <$r2>")
+  }
+  
+  
+  object AbsReg {
+    import regex.RegexRegions._
+    
+    def unapply(x: Reg) = x match {
+      case Reg(Sym(sym @ Symbol(str))) if str startsWith "'" => Some(sym)
+      case _ => None
+    }
+  }
+  
+//  override def delegate(x: Fun) = { debug(x); super.delegate(x) }
   
   /** Note: does not handle abs types with typ args */
   override def apply(x: Type) = (x.t.value match {
@@ -161,6 +192,7 @@ class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIde
           t
         case _ => x
       }
+    //case TRef(IntType,_) => IntType // TODO; doesn't seem to work yet
     case _ => super.apply(x)
   }) //and println
   override def tspec(x: TypeSpec) = apply(x) // Lazy(apply(x.get))
@@ -169,8 +201,9 @@ class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIde
   override def typs(x: TypSym) = apply(x) //getUnique(x)
   override def funs(x: FunSym) = apply(x) //getUnique(x)
   override def vars(x: a.VarSym) = apply(x)
-  override def terms(x: Term) = Typd(apply(x.obj), apply(x.typ))
+  override def terms(x: Term) = Typd(apply(x.obj), apply(x.typ), apply(x.reg))
   
+  override def apply(r: Reg) = r.transHead(regSubs)
   
 }
 

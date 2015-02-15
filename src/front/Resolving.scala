@@ -58,6 +58,8 @@ class Presolve extends StageConverter(Ast, Resolving) {
   def pushCtx = ctx = Ctx(Map(), Map(), Map(), Some(ctx))
   def popCtx = ctx = ctx.parent.get
   
+  def getCtx = ctx
+  
 //  Builtins.btyps foreach apply
   
   val btyps = Builtins.btyps map apply

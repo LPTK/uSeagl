@@ -53,8 +53,8 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
       case NilExpr => 
       case IntLit(n) => 
       case IntOp(a,b,o) =>
-        ctx.soft_cstrs += (a.typ.valType -> IntType)
-        ctx.soft_cstrs += (b.typ.valType -> IntType)
+        ctx.soft_cstrs += (a.typ -> IntType) // (a.typ.valType -> IntType)
+        ctx.soft_cstrs += (b.typ -> IntType)
         IntType
       case Var(vs) => 
       case Block(s,e) => //c[Block](r).ret.typ //terms(e).typ
@@ -68,7 +68,8 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
         ctx.hard_cstrs += (t.typ -> e.typ)
         ctx.hard_cstrs += (t.typ -> x.typ)
 //        ctx.leastUpperBound(t.typ, e.typ)
-      case b @ Build(Type(Cyclic(t: ConcTyp), _, _), args) =>
+//      case b @ Build(Type(Cyclic(t: ConcTyp), _, _), args) =>
+      case b @ Build(TType(t: ConcTyp, _, _), args) =>
         for (i <- 0 until args.size)
           ctx.hard_cstrs += (args(i).typ -> b.transType(t.params(i).typ))
       case b: Build => wtf
@@ -76,6 +77,12 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
 //        println("FCALL ", x.typ, fc.retType)
         fc.args map (_.typ.valType) zip (fc.paramTypes) foreach (ctx.soft_cstrs += _)
         ctx.hard_cstrs += (x.typ -> fc.retType)
+        fc.retType match {
+//          case TType(RefTyp, _, Seq(r)) =>
+          case TRef(_, r) =>
+            ctx.reg_cstrs += (x.reg -> r)
+          case _ =>
+        }
       case FieldAccess(e, id) => // TODO handle refs
 //        val typ = e.typ.valType
 //        typ.t.value match {
@@ -85,7 +92,7 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
         ctx.field_cstrs += ((e.typ, id, x.typ))
   //    case a.FieldAssign(e, id, v) => FieldAssign(terms(e), id, terms(v))
     }
-    Typd(super.apply(x.obj), x.typ)
+    Typd(super.apply(x.obj), x.typ, x.reg)
   }
   
   
@@ -122,7 +129,7 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
 //  }
   override def fctComputed(k: a.Fun, x: Cyclic[Fun]) = {
 //    new Unify2(this).getUnique(x) oh_and popCtx
-//    println(x)
+    println(x)
     new Unify(this)(x) oh_and popCtx
   }
   
@@ -130,8 +137,10 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
   case class Ctx (
       parent: Option[Ctx],
       hard_cstrs: ArrayBuffer[(Type,Type)] = ArrayBuffer(),
-      soft_cstrs: ArrayBuffer[(Type,Type)] = ArrayBuffer(),
-      field_cstrs: ArrayBuffer[(Type,VId,Type)] = ArrayBuffer()
+      soft_cstrs: ArrayBuffer[(Type,Type)] = ArrayBuffer(), // only the lhs is "soft" (references will be coerced)
+      field_cstrs: ArrayBuffer[(Type,VId,Type)] = ArrayBuffer(),
+//      reg_cstrs: ArrayBuffer[(VId,Reg)] = ArrayBuffer()
+      reg_cstrs: ArrayBuffer[(Reg,Reg)] = ArrayBuffer()
   ) {
     
   }
@@ -157,6 +166,7 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
     val es = Seq()
     val Cyclic(Fun(uid, nam, typs, regs, params, ret, spec, body)) =
       renew(pt.apply(pt.a.Fun(new FUid, IntlFId, es, es, es, b.loc.typ, Specs.Spec.empty, b.value)))
+    state.varTable += (b.loc.uid -> Local(b.loc.uid, b.loc.nam, ret)) // we need to leak the typed result; (pretty ugly) 
     body
   }
   

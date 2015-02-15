@@ -4,9 +4,10 @@ import utils._
 import common._
 import Stages._
 import Specs._
-import Proxy._
+import Regions._
+//import Proxy._
 import scala.util.{Try, Success, Failure}
-import common.Reporting
+import common.Reporting._
 import collection.mutable.ArrayBuffer
 import collection.mutable.HashMap
 import collection._
@@ -23,7 +24,12 @@ abstract class StageState[S <: Stage](val s: S) {
  * TODO:
  *  encapsulate mutability with (implicit c: Ctx) params
  *  and externalize state storage/management
- *  
+ * 
+ * Notes:
+ *   - types and functions, when transformed using renewTree, will generate new cyclic objects, even if left unchanged
+ *     this is not very important because equality is structural; but it may lead to bad perf
+ * 
+ * 
  */
 abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   import b._
@@ -93,7 +99,7 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
     case a.Block(s,e) => Block(s map { case Left(t) => Left(terms(t)) case Right(b) => Right(apply(b)) }, terms(e))
     case a.Ite(c,t,e) => Ite(terms(c),terms(t),terms(e))
     case a.Build(t,a) => Build(apply(t), a map terms)
-    case a.FCall(fs,ta,ra,a) => FCall(funs(fs), ta map apply, ra, a map terms)
+    case a.FCall(fs,ta,ra,a) => FCall(funs(fs), ta map apply, ra map apply, a map terms)
     case a.FieldAccess(e, id) => FieldAccess(terms(e), id)
     case a.FieldAssign(e, id, v) => FieldAssign(terms(e), id, terms(v))
   }
@@ -108,7 +114,7 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   def delegate(x: a.Fun): Fun =
     Fun(x.uid, x.nam, x.typs map tparam, x.regs, x.params map apply, tspec(x.ret), Spec.empty, terms(x.body))
   
-  def apply(x: a.Type): Type = Type(typs(x.t), x.targs map apply, x.rargs)
+  def apply(x: a.Type): Type = Type(typs(x.t), x.targs map apply, x.rargs map apply)
   
   final def apply(x: a.Typ): Cyclic[Typ] =
 //    typTable getOrElse (x.uid, getUnique(x)) value
@@ -141,6 +147,8 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
 //    Binding(x.nam, terms(x.value))
   def apply(x: a.Binding): Binding =
     Binding(apply(x.loc), terms(x.value))
+  
+  def apply(x: Reg): Reg = x
   
   
   /** Cycle handling */

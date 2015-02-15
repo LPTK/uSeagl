@@ -5,7 +5,7 @@ import utils._
 case class CyclicDependency() extends Exception("Illegal cyclic access")
 
 //class Cyclic[+T](expr: Cyclic[T] => T, toStr: T => String = ((t:T) => t.toString)) { //extends Unique {
-class Cyclic[+T](expr: Cyclic[T] => T, eqt: Opt[(T,Any) => Bool] = None, toStr: T => String = ((t:T) => t.toString)) { //extends Unique {
+class Cyclic[+T](expr: Cyclic[T] => T, eqtest: Opt[(T,Any) => Bool] = None, toStr: T => String = ((t:T) => t.toString)) { //extends Unique {
   def this(x: T) = this(_ => x)
   
   private val _value = expr(this)
@@ -24,7 +24,7 @@ class Cyclic[+T](expr: Cyclic[T] => T, eqt: Opt[(T,Any) => Bool] = None, toStr: 
 //      case Cyclic(x) => this == x
 //      case _ => this == x
 //  }
-  override def equals(x: Any) = (eqt,x) match {
+  override def equals(x: Any) = (eqtest,x) match {
       case (Some(eqt), Cyclic(x)) => eqt(value, x)
       case (Some(eqt), _) => eqt(value, x)
       case _ => super.equals(x) // referential equality

@@ -95,24 +95,31 @@ object REPL extends App {
         ex.h.dealloc(r)
         // TODO put in ctx
       
-      case Success(Right(b @ Binding(_id, value)), _) =>
+      case Success(Right(b @ Binding(loc, value)), _) =>
 //        ctx(id) = ex(rs(ps(value)))
 //        println(ctx(id))
 //        val a = rs(ps(value))
-        val rb @ Resolved.Binding(loc, v) = rs(ps(b))
-        val id = loc.nam
-        
-//        val tv = ty.typeUnify(rb)
-        val tv = ag.typeUnify(rb)
-        println("Typed: " + tv.typ)
-        
-        val xv = ex(v, ctx.mapValues(_ _2) toMap)
-        if (ctx isDefinedAt id)
-          ex.h.dealloc(ctx(id)._2)
-        ctx(id) = tv.typ -> xv
-//        println(v)
-        println(s"$id: ${ex.h.dispVal(ctx(id)._2)}")
-      
+        try {
+          val rb @ Resolved.Binding(loc, v) = rs(ps(b))
+          val id = loc.nam
+          
+  //        val tv = ty.typeUnify(rb)
+          val tv = ag.typeUnify(rb)
+          println("Typed: " + tv.typ)
+          
+          val xv = ex(v, ctx.mapValues(_ _2) toMap)
+          if (ctx isDefinedAt id)
+            ex.h.dealloc(ctx(id)._2)
+          ctx(id) = tv.typ -> xv
+  //        println(v)
+          println(s"$id: ${ex.h.dispVal(ctx(id)._2)}")
+//          println(ag.state.varTable)
+        }
+        catch {
+          case t: Throwable =>
+            ps.getCtx.locTable -= loc.nam
+            throw t
+        }
       case f: Failure =>
         println(f)
         
