@@ -26,7 +26,8 @@ self: Types.singleStaged.Identity =>
  *    fun f[T](x:T) = { f(0); f(()); x }
  *  should not type to
  *    fun f[T](x: T): Ref[T]{x} = {f[Int](0: Int): Ref[T]{x}; f[Unit](new Unit: Unit): Ref[T]{x}; x: Ref[T]{x}}: Ref[T]{x}
- *  
+ *  "polymorphic recursive function needs explicit complete return type"
+ * 
  */
 //class Aggregate(override val state: StageState[Typed.type]) extends Types.singleStaged.Identity {
 class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageIdentDefs {

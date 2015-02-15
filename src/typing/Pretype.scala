@@ -76,6 +76,9 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
         if (targs.size > fc.f.typs.size)
           throw CompileError(s"Too many type arguments in call $fc")
         r = FCall(f, targs ++ (for (i <- targs.size until fc.f.typs.size) yield ctx.mkAbsType), rargs, args)
+        if (!f.wasComputerYet && fc.f.value.typs.size > 0 && !fc.f.value.ret.isComplete)
+//          throw CompileError(s"Recursive-polymorphic function needs complete return type specified: ${fc.f.nam}")
+          throw CompileError(s"Function '${fc.f.nam}' with polymorphic recursion (explicit type parameters) needs return type completely specified")
         ctx.mkAbsType // can't know in advance the type of the return; add cstr later
       case a.FieldAccess(e, id) => // TODO handle refs
 //        val FieldAccess(e, id) = r
@@ -155,7 +158,6 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
   }
   
   
-  
   implicit class TType(self: Type) extends Inst {
     import self._
     
@@ -171,6 +173,25 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
     
   }
   
+  implicit class TaType(self: a.TypeSpec) {
+    import self._
+    
+    // TODO also require full region args?
+    def isComplete = {
+      def ok(typ: a.Type): Bool =
+        typ.targs.size === typ.t.typs.size && (typ.targs forall ok)
+      self match {
+        case None => false
+  //      case Some(a.Type(Cyclic(t), targs, rargs)) =>
+  //        targs forall (_ isComplete)
+        case Some(typ) =>
+//          println(typ,typ.targs.size, typ.t.typs.size, (typ.targs forall ok))
+          ok(typ)
+      }
+    }
+    
+  }
+  
   def ref(typ: Type, nam: VId) = typ match {
     case Type(Cyclic(RefTyp), _, _) =>
       typ
@@ -180,6 +201,10 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
   
   
 }
+
+
+
+
 
 
 
