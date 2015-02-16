@@ -31,6 +31,8 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
   val RefTyp = btByName('Ref)
   def RefType(typ: Type, reg: Reg) = Type(RefTyp, Seq(typ), Seq(reg))
 
+  val bfuns = rs.bfuns map (t => apply(t))
+  
 //  case class FunInfo(argTyps: Seq[AbsTyp])
 //  case class FunInfo(argTypes: Seq[Type], retType: Type)
   case class FunInfo(params: Seq[Local], retType: Type)

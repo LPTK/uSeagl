@@ -13,8 +13,10 @@ import collection._
 
 /**
  * TODO
- *  coalesce Ref[Ref] into Ref and  >> Ref[Int] into Int <<
+ * - coalesce Ref[Ref] into Ref and  >> Ref[Int] into Int <<
  * 
+ * - find a way to make region unif work, eg:
+ *     fun f(a,b) = if nil then a else b
  * 
  * Notes
  * - can't currently call functions with ref params, even with a ref argument
@@ -26,7 +28,7 @@ class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIde
   import ag.pt._
   
   def debug(x: Any) {
-//    println(x)
+    println(x)
   }
   
   override val state = ag.state
@@ -127,7 +129,9 @@ class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIde
 //      case (TType(RefTyp, Seq(t1), _), TType(RefTyp, Seq(t2), _)) => sc += (t1 -> t2)
       case (TType(RefTyp, Seq(t1), _), t2) => hc += (t1 -> t2)
 //      case (t1, TType(RefTyp, Seq(t2), _)) => hc += (t1 -> t2)
-      case (t1, t2) => hc += (t1 -> t2)
+      case (t1, t2) =>
+        /** Note: maybe we should first send all coalescable refs before sending those; we might find out new ones in the process */
+        hc += (t1 -> t2)
 //        println(t1,t2,RefTyp,t1.t == RefTyp)
 //        println(t1.t,RefTyp,t1.t.value == RefTyp.value)
     }

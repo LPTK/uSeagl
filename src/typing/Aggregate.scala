@@ -41,6 +41,9 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
   
   val IntlFId = FId("[internal]")
   
+  // "import" functions so they appear in the :c context command of the REPL before using them
+  val bfuns = pt.bfuns map (f => renew(f))
+  
 //  override def typs(x: a.TypSym) = getUnique(x.value)
 //  override def funs(x: a.FunSym) = getUnique(x.value)
 //  override def vars(x: a.VarSym) = apply(x)
