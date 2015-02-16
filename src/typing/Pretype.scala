@@ -131,11 +131,17 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
   
   override def delegate(x: a.Fun) = {
     pushCtx
-    super.delegate(x)
+    try super.delegate(x) catch { case t: Throwable => popCtx; throw t }
   }
-  override def fctComputed(k: a.Fun, x: Cyclic[Fun]) = { // TODO rm x param
-    x oh_and { popCtx }
-  }
+  override def fctComputed(k: a.Fun, x: Cyclic[Fun]) = try { // TODO rm k param
+//    x oh_and { popCtx }
+//    if (x.value.params.)
+//    if (!(x.params map (_ typ) forall (_ isRegComplete)))
+    def regCompl = k.params map (_.typ.isRegComplete) forall (identity _)
+    if (!regCompl) // other part of the check in Aggregate's fctComputed
+      throw CompileError(s"Incomplete region arguments specification in parameters of $x")
+    x
+  } finally popCtx
   
   
   case class Ctx (parent: Option[Ctx]) {
@@ -227,6 +233,15 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
         case Some(typ) =>
 //          println(typ,typ.targs.size, typ.t.typs.size, (typ.targs forall ok))
           ok(typ)
+      }
+    }
+    
+    def isRegComplete = {
+      def ok(typ: a.Type): Bool =
+        typ.rargs.size === typ.t.regs.size && (typ.targs forall ok)
+      self match {
+        case None => true
+        case Some(typ) => ok(typ)
       }
     }
     

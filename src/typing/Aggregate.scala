@@ -130,10 +130,34 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
 ////    new Unify(ctx.cstrs toMap).mkUnique(x) oh_and {popCtx; flushChecks}
 //    new Unify(state, ctx.cstrs toMap).getUnique(x) and {popCtx; flushChecks; funTable(k.uid) = _}
 //  }
-  override def fctComputed(k: a.Fun, x: Cyclic[Fun]) = {
+  override def fctComputed(k: Fun, x: Cyclic[Fun]) = {
 //    new Unify2(this).getUnique(x) oh_and popCtx
     println(x)
-    new Unify(this)(x) oh_and popCtx
+//    new Unify(this)(x) oh_and popCtx
+//    val r = try new Unify(this)(x) finally popCtx
+    val u = try new Unify(this) finally popCtx
+    val r = u(x)
+    
+    def hasRegs(typ: Type): Bool =
+      (typ.t.regs.size != 0) || (typ.targs exists hasRegs)
+    
+    def hasAbsTypWithRegs(typ: Type): Bool = typ match {
+      case TType(at: AbsTyp, _, _) if u.subs isDefinedAt at => hasRegs(u.subs(at)) // TODO assert no targs/rargs
+      case typ @ TType(ct: ConcTyp, targs, rargs) =>
+//        hasRegs(typ) || (targs exists hasAbsTypWithRegs)
+        (targs exists hasAbsTypWithRegs)
+      case _ => false
+    }
+    
+    for ((Local(_,_,t1), l2 @ Local(_,_,t2)) <- x.params zip r.params) {
+//    }
+//    for (Local(_,_,t1) <- x.params) {
+      if (hasAbsTypWithRegs(t1))
+        throw CompileError(s"Inferred parameter $l2 has unspecified region arguments, in: $r")
+    }
+    
+//    u(x)
+    r
   }
   
   

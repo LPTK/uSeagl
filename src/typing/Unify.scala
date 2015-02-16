@@ -183,6 +183,22 @@ class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIde
   }
   
 //  override def delegate(x: Fun) = { debug(x); super.delegate(x) }
+//  override def delegate(x: Fun) = {
+//    val r = super.delegate(x)
+//    
+////    def ok(typ: Type): Bool =
+////      typ.rargs.size === typ.t.regs.size && (typ.targs forall ok)
+////    val rcompl = r.params map (_ typ) match {
+////      case TType(_, Seq(), _) => true
+//////      case Some(typ) => ok(typ)
+////    }
+//    
+//    def ok(typ: Type): Bool = typ match {
+//      case 
+//    }
+//    
+//    r
+//  }
   
   /** Note: does not handle abs types with typ args */
   override def apply(x: Type) = (x.t.value match {
