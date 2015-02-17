@@ -28,6 +28,10 @@ self: Types.singleStaged.Identity =>
  *    fun f[T](x: T): Ref[T]{x} = {f[Int](0: Int): Ref[T]{x}; f[Unit](new Unit: Unit): Ref[T]{x}; x: Ref[T]{x}}: Ref[T]{x}
  *  "polymorphic recursive function needs explicit complete return type"
  * 
+ * 
+ * TODO: there should be a bunch of "currently typed decls" that would be the only renewed entities
+ * 
+ * 
  */
 //class Aggregate(override val state: StageState[Typed.type]) extends Types.singleStaged.Identity {
 class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageIdentDefs {
@@ -78,7 +82,8 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
       case b: Build => wtf
       case fc: FCall =>
 //        println("FCALL ", x.typ, fc.retType)
-        fc.args map (_.typ.valType) zip (fc.paramTypes) foreach (ctx.soft_cstrs += _)
+//        fc.args map (_.typ.valType) zip (fc.paramTypes) foreach (ctx.soft_cstrs += _)
+        fc.args map (_.typ) zip (fc.paramTypes) foreach (ctx.soft_cstrs += _)
         ctx.hard_cstrs += (x.typ -> fc.retType)
         fc.retType match {
 //          case TType(RefTyp, _, Seq(r)) =>
@@ -206,7 +211,11 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
     
     def targs = self.targs
     def rargs = self.rargs
+    def args = self.args
+    
     def parmzd = f.value
+    
+    def reg(t: Term) = t.reg
     
     def retType = transType(f.ret)
     
@@ -219,7 +228,11 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
     
     def targs = typ.targs
     def rargs = typ.rargs
+    def args = self.args // TODO: is this correct? does Build have inferred args?
+    
     def parmzd = typ.t.value
+    
+    def reg(t: Term) = t.reg
     
   }
   

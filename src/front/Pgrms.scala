@@ -72,7 +72,9 @@ self: Stage =>
 //    }
   }
 
-  case class AbsTyp(uid: TUid, nam: TId, typs: Seq[TypeParam], regs: Seq[VId], userDefined: Bool) extends Typ
+  case class AbsTyp(uid: TUid, nam: TId, typs: Seq[TypeParam], regs: Seq[VId], userDefined: Bool) extends Typ {
+    def params = Seq()
+  }
   
   
   case class Type(t: TypSym, targs: Seq[Type], rargs: Seq[Reg]) {
@@ -107,20 +109,31 @@ self: Stage =>
   trait Parmzd {
     def typs: Seq[TypeParam]
     def regs: Seq[VId]
+    def params: Seq[Local]
   }
   
   trait Inst {
     def parmzd: Parmzd
     def targs: Seq[Type]
     def rargs: Seq[Reg]
+    def args: Seq[Term]
     
-    def transType(t: Type): Type = t match { // TODO: careful with cycles!
+    def reg(t: Term): Reg
+    
+    lazy val regSubs =
+      (parmzd.regs map (_ sym) zip rargs).toMap ++ //and {print(">>"); println}
+      (parmzd.params map (_.nam sym) zip (args map reg)).toMap
+    
+    def transType(t: Type): Type = t match { // TODO: careful with cycles! => inf.loops?
       case Type(Cyclic(at: AbsTyp), _, _) if parmzd.typs contains at =>
         transType(targs(parmzd.typs indexOf at))
       case Type(c@Cyclic(ct: ConcTyp), targs, rargs) =>
-        Type(c, targs map transType, rargs)
+        Type(c, targs map transType, rargs map transReg)
       case _ => t // unknown abs type
     }
+    
+    def transReg(r: Reg) = //rargs(parmzd.regs indexOf r)
+      r.transHead(regSubs)
     
   }
   

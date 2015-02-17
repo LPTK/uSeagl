@@ -18,6 +18,7 @@ import collection._
  * - find a way to make region unif work, eg:
  *     fun f(a,b) = if nil then a else b
  * 
+ * 
  * Notes
  * - can't currently call functions with ref params, even with a ref argument
  *   reason is we coalesce ref args without first seeing if they fit, which would entail a form of backtracking
@@ -126,7 +127,9 @@ class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIde
     printCstrs
     
     if (!sc.isEmpty) sc.remove(sc.size-1) match {
-//      case (TType(RefTyp, Seq(t1), _), TType(RefTyp, Seq(t2), _)) => sc += (t1 -> t2)
+      case (TType(RefTyp, Seq(t1), Seq(r1)), TType(RefTyp, Seq(t2), Seq(r2))) =>
+        rc += (r1 -> r2)
+        sc += (t1 -> t2)
       case (TType(RefTyp, Seq(t1), _), t2) => hc += (t1 -> t2)
 //      case (t1, TType(RefTyp, Seq(t2), _)) => hc += (t1 -> t2)
       case (t1, t2) =>
@@ -163,6 +166,9 @@ class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIde
   
   debug(subs)
   
+  def printRc = debug(s"rc: ${rc map {case(a,b) => s"$a = $b"} mkString ","}")
+  printRc
+  
 //  def unifRegs(s: Sym, r: Reg) {
 //  }
   for (regs <- rc) regs match {
@@ -171,6 +177,8 @@ class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIde
     case (r1, r2) =>
       if (r1 =/= r2) throw CompileError(s"Cannot unify regions <$r1> and <$r2>")
   }
+  
+  debug(regSubs)
   
   
   object AbsReg {

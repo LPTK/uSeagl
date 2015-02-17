@@ -107,8 +107,9 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
       pushCtx
       val ps = params map apply
       val newAbsTyps = ctx.absTyps
+      val newAbsRegs = ctx.absRegs
       popCtx
-      ConcTyp(uid, nam, (typs map tparam) ++ newAbsTyps, regs, ps)
+      ConcTyp(uid, nam, (typs map tparam) ++ newAbsTyps, regs ++ newAbsRegs, ps)
   }
   
   override def apply(x: a.Type) = {
@@ -120,13 +121,19 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
       else Seq()
     }
     
+    val rargs = (x.rargs map apply) ++ {
+      if (t.wasComputerYet)
+        for{i <- 0 until (t.regs.size - x.rargs.size)} yield ctx.mkAbsReg
+      else Seq()
+    }
+    
     // TODOne check will be done in next phase!:
 //    delayCheck {
 //      if (targs.size != t.typs.size)
 //        throw CompileError(s"Wrong number of type arguments in $x of type $t")
 //    }
     
-    Type(t, targs, x.rargs)
+    Type(t, targs, rargs)
   }
   
   override def delegate(x: a.Fun) = {
@@ -182,7 +189,10 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
       VId(s"'$letter" + (if (absVarId > 26) (absVarId/26) else ""))
     } oh_and (absVarId += 1)
     
-    def mkAbsReg = Reg(nextVarId)
+//    val absRegs = ArrayBuffer[Reg]()
+//    def mkAbsReg = Reg(nextVarId) and (absRegs += _)
+    val absRegs = ArrayBuffer[VId]()
+    def mkAbsReg = Reg(nextVarId and (absRegs += _))
     
   }
   private var ctx = Ctx(None)
@@ -196,7 +206,12 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
     
     def targs = self.targs
     def rargs = self.rargs
+    def args = Seq() // note: can cause problems; cf. ConcTyp actually has args
+    // self.args
+    
     def parmzd = t.value
+    
+    def reg(t: Term) = t.reg
     
     def valType = self match {
       case Type(RefTyp, Seq(typ), Seq(reg)) =>

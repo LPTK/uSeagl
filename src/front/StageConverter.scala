@@ -24,6 +24,11 @@ abstract class StageState[S <: Stage](val s: S) {
  * TODO:
  *  encapsulate mutability with (implicit c: Ctx) params
  *  and externalize state storage/management
+ *  
+ * TODO: a transaction mechanism to rollBack fun/typ table updates in failure
+ *  c newChild { ctx => blah } // only commits to c if returns properly
+ * 
+ * TODO: a process method that takes a bunch of decls and explicitly resolve dependencies (mut rec fun groups?)
  * 
  * Notes:
  *   - types and functions, when transformed using renewTree, will generate new cyclic objects, even if left unchanged
