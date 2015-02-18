@@ -65,7 +65,7 @@ self: Stage =>
     (this match {
       case ConcTyp(uid, nam, typs, regs, params) =>
         "typ " + nam + mkTyps(typs map tpname) + mkRegs(regs) + mkArgs(params)
-      case AbsTyp(uid, nam, typs, regs, ud) =>
+      case AbsTyp(uid, nam, typs, regs, qu, ud) =>
         "" + nam + mkTyps(typs) + mkRegs(regs) + "=?"
     })
   }
@@ -81,12 +81,12 @@ self: Stage =>
     }
   }
 
-  case class AbsTyp(uid: TUid, nam: TId, typs: Seq[TypeParam], regs: Seq[VId], var quantified: Bool) extends Typ {
+  case class AbsTyp(uid: TUid, nam: TId, typs: Seq[TypeParam], regs: Seq[VId], var quantified: Bool, userDefined: Bool) extends Typ {
     def params = Seq()
   }
   object AbsTyp {
 //    def apply(): AbsTyp = { val id = new TUid; AbsTyp(id, TId(id toString), Seq(), Seq(), false) }
-    def apply(): AbsTyp = new TUid in { id => AbsTyp(id, TId(id toString), Seq(), Seq(), false) }
+    def apply(): AbsTyp = new TUid in { id => AbsTyp(id, TId(id toString), Seq(), Seq(), false, false) }
   }
   
   

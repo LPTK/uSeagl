@@ -191,7 +191,7 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
   }
   
   def gen(t: Type): Unit = t match {
-    case TType(at: AbsTyp, _, _) => at.quantified = true
+    case TType(at: AbsTyp, _, _) if !at.userDefined => at.quantified = true
     case Type(c@Cyclic(ct: ConcTyp), targs, rargs) =>
       targs foreach gen
     case _ =>

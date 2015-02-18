@@ -21,6 +21,13 @@ import org.junit.Before
  *   region inference stuff...
  *   
  *   
+ *   c = new Cell(nil)
+     id[Cell[Int]](c)
+     id[Cell[Unit]](c) // should unif-fail
+ *   
+ *   
+ *   
+ *   
  */
 class Typing extends JUnitSuite {
   

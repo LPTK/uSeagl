@@ -79,7 +79,7 @@ class Presolve extends StageConverter(Ast, Resolving) {
   def terms(x: a.Term)  = apply(x)
   
   def tspec(x: a.TypeSpec) = x map apply
-  def tparam(x: a.TypeParam) = AbsTyp(new TUid, x, Seq(), Seq(), false) and (ctx(x) = _)
+  def tparam(x: a.TypeParam) = AbsTyp(new TUid, x, Seq(), Seq(), false, true) and (ctx(x) = _)
   
   
   override def delegate(x: a.Fun) = { // TODO use and

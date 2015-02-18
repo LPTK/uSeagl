@@ -156,7 +156,7 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
     val recCalls = ArrayBuffer[FCall]()
     def mkAbsType = {
 //      Type(new Cyclic(AbsTyp(ctx.nextId, Seq(), Seq(), false) and (absTyps += _)), Seq(), Seq())
-      val at = AbsTyp(new TUid, ctx.nextId, Seq(), Seq(), false)
+      val at = AbsTyp(new TUid, ctx.nextId, Seq(), Seq(), false, false)
 //      println(s"mk $at")
 //      if (at.uid.id == 74) ???
       absTyps += at

@@ -35,7 +35,8 @@ object Builtins {
   val bfuns = Seq(
       binIntOp("add"){_ + _},
       binIntOp("eq"){(a,b) => if (a == b) 1 else 0},
-      funtxt("fun id(x) = x"),
+//      funtxt("fun id(x) = x"),
+      funtxt("fun id[T](x:T) = x"),
       funtxt("fun refto{r}(x: Ref{r}) = x  // useful to require a particular region for a ref"),
       funtxt("fun coe[T](x:T,y:T) = ()  // coercition of two values' types")
   )
