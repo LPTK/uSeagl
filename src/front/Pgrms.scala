@@ -66,14 +66,20 @@ self: Stage =>
   case class ConcTyp(uid: TUid, nam: TId, typs: Seq[TypeParam], regs: Seq[VId], params: Seq[Local]) extends Decl with Typ {
     def getField(id: VId) = params.find (_.nam === id)
     
-//    override def equals(that: Any) = that match {
-//      case that: ConcTyp => that.uid === uid // Note: this is because transformations can duplicate Cyclic[Type] objects, which use unique
-//      case _ => false
-//    }
+    /** TODO: check if always okay to do this: this is assuming a ConcTyp in the same stage with the same id should be the same
+    * (note: otherwise equality of recursive types diverges) */
+    override def equals(that: Any) = that match {
+      case that: ConcTyp => that.uid === uid // Note: this is because transformations can duplicate Cyclic[Type] objects, which use unique
+      case _ => false
+    }
   }
 
   case class AbsTyp(uid: TUid, nam: TId, typs: Seq[TypeParam], regs: Seq[VId], userDefined: Bool) extends Typ {
     def params = Seq()
+  }
+  object AbsTyp {
+//    def apply(): AbsTyp = { val id = new TUid; AbsTyp(id, TId(id toString), Seq(), Seq(), false) }
+    def apply(): AbsTyp = new TUid in { id => AbsTyp(id, TId(id toString), Seq(), Seq(), false) }
   }
   
   

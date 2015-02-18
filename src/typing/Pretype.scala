@@ -98,7 +98,7 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
         ref(ctx.mkAbsType, e.reg ~ Reg(id)) // TODO handle region
       case a.FieldAssign(e, id, v) => (UnitType, ctx.mkTmpReg)
     }
-    Typd(r, t, reg)
+    Typd(r.desugar, t, reg)
   }
   
   

@@ -18,7 +18,8 @@ object Builtins {
       typtxt("typ Pair(fst,snd)"),
       typtxt("typ Couple[T](fst:T,snd:T)"),
       typtxt("typ Cell(val)"),
-      typtxt("typ RefCell(r: Ref)")
+      typtxt("typ RefCell(r: Ref)"),
+      typtxt("typ List[T](head: T, tail: List[T])")
   )
   
   val IntType = Type(TId("Int"), Seq(), Seq())

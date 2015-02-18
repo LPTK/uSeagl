@@ -8,9 +8,11 @@ import Regions._
 trait Exprs {
 self: Stage =>
   
-  trait Expr extends Stmt
+  sealed trait Expr extends Stmt {
+    def desugar: BasicExpr = this match { case be: BasicExpr => be } // for now they're all basic exprs
+  }
   
-  trait BasicExpr extends Expr
+  sealed trait BasicExpr extends Expr
   
   
   case class Var(sym: VarSym) extends BasicExpr

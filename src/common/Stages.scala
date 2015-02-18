@@ -92,7 +92,7 @@ object Stages {
   object Typed extends Stage with ResolvedStage {
     import typing._
     
-    type Term = Typd[Expr]
+    type Term = Typd[BasicExpr]
     
     type TypeSpec = Type
     

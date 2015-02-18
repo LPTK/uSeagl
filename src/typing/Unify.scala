@@ -29,7 +29,7 @@ class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIde
   import ag.pt._
   
   def debug(x: Any) {
-    println(x)
+//    println(x)
   }
   
   override val state = ag.state
