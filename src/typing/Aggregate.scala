@@ -30,6 +30,10 @@ self: Types.singleStaged.Identity =>
  * 
  * 
  * TODO: there should be a bunch of "currently typed decls" that would be the only renewed entities
+ *   -- actually, remove this renewing thing
+ *   
+ *   
+ * TODO: allow nested functions (use levels for sound generalization) and treat mutrec funs correctly
  * 
  * 
  */
@@ -83,8 +87,13 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
       case fc: FCall =>
 //        println("FCALL ", x.typ, fc.retType)
 //        fc.args map (_.typ.valType) zip (fc.paramTypes) foreach (ctx.soft_cstrs += _)
-        fc.args map (_.typ) zip (fc.paramTypes) foreach (ctx.soft_cstrs += _)
-        ctx.hard_cstrs += (x.typ -> fc.retType)
+        
+        println(s"Call to ${fc.f.nam}")
+        
+        implicit val subs = mutable.HashMap[AbsTyp,Type]()
+        
+        fc.args map (_.typ) zip (fc.paramTypes map inst) foreach (ctx.soft_cstrs += _)
+        ctx.hard_cstrs += (x.typ -> inst(fc.retType))
         fc.retType match {
 //          case TType(RefTyp, _, Seq(r)) =>
           case TRef(_, r) =>
@@ -162,8 +171,34 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
     }
     
 //    u(x)
+    r.value.params map (_ typ) foreach gen
+    gen(r.value.ret) // TODO: use levels to allow sound nested functions gen; TODO rm mutation
     r
   }
+  
+  
+  
+//  def inst(f: Fun) = 
+//  def inst(s: Sign) = 
+//  def inst(t: Type)(implicit subs: mutable.Map[AbsTyp, Type] = mutable.HashMap()): Type = t match {
+  def inst(t: Type)(implicit subs: mutable.Map[AbsTyp, Type]): Type = t match {
+    case TType(at: AbsTyp, _, _) if subs isDefinedAt at => subs(at)
+    case TType(at: AbsTyp, _, _) if at.quantified =>
+      Type(new Cyclic(AbsTyp()), Seq(), Seq()) and (subs += at -> _) and (x => println(s"inst $at -> $x"))
+    case Type(c@Cyclic(ct: ConcTyp), targs, rargs) =>
+      Type(c, targs map inst, rargs)
+    case _ => t
+  }
+  
+  def gen(t: Type): Unit = t match {
+    case TType(at: AbsTyp, _, _) => at.quantified = true
+    case Type(c@Cyclic(ct: ConcTyp), targs, rargs) =>
+      targs foreach gen
+    case _ =>
+  }
+  
+  
+  
   
   
   case class Ctx (

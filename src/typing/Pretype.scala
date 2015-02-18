@@ -201,6 +201,10 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
   
   
   
+  
+  
+  
+  
   implicit class TType(self: Type) extends Inst {
     import self._
     

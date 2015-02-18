@@ -35,8 +35,15 @@ class VUid extends Uid
 trait Pgrms {
 self: Stage =>
   
-  val dispIds = false
+//  val dispIds = false
 //  val dispIds = true
+  
+  val dispIds =
+//  /* // comment/uncomment this line
+    false
+  // */
+  true and (doNothing => ())
+  
   
   case class Pgrm(typs: Map[Id,ConcTyp], funs: Map[Id,Fun])
   
@@ -74,7 +81,7 @@ self: Stage =>
     }
   }
 
-  case class AbsTyp(uid: TUid, nam: TId, typs: Seq[TypeParam], regs: Seq[VId], userDefined: Bool) extends Typ {
+  case class AbsTyp(uid: TUid, nam: TId, typs: Seq[TypeParam], regs: Seq[VId], var quantified: Bool) extends Typ {
     def params = Seq()
   }
   object AbsTyp {

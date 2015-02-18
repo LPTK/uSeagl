@@ -137,7 +137,7 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   }
   /** The following are error prone since they don't check typTable! */
   def apply(x: a.ConcTyp): ConcTyp = ConcTyp(x.uid, x.nam, x.typs map tparam, x.regs, x.params map apply)
-  def apply(x: a.AbsTyp): AbsTyp = AbsTyp(x.uid, x.nam, x.typs map tparam, x.regs, x.userDefined)
+  def apply(x: a.AbsTyp): AbsTyp = AbsTyp(x.uid, x.nam, x.typs map tparam, x.regs, x.quantified)
   
   def apply(x: a.Stmt): Stmt = x match {
     case x: a.Expr => apply(x)
