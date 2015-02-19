@@ -13,10 +13,16 @@ import collection._
 
 /**
  * TODO
- * - coalesce Ref[Ref] into Ref and  >> Ref[Int] into Int <<
  * 
  * - find a way to make region unif work, eg:
  *     fun f(a,b) = if nil then a else b
+ * 
+ * - DON'T renew/unify everything everytime!
+ * 
+ * - find a solution to mutrec funs
+ * 
+ * - TODO only use "flatten" to remove ref to prim typs
+ * 
  * 
  * 
  * Notes
@@ -29,7 +35,7 @@ class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIde
   import ag.pt._
   
   def debug(x: Any) {
-    println(x)
+//    println(x)
   }
   
   override val state = ag.state
@@ -225,13 +231,18 @@ class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIde
 //    r
 //  }
   
+  def flatten(typ: Type): Type = typ match {
+    case TRef(typ @ TType(t,_,_),_) if t.primitive => flatten(typ)
+    case _ => typ
+  }
+  
   override def apply(x: Expr) = (x match {
     case Ascribe(e,typ) => e.obj
     case _ => super.apply(x)
   })
   
   /** Note: does not handle abs types with typ args */
-  override def apply(x: Type) = (x match {
+  override def apply(x: Type) = flatten(x match {
 //    case at: AbsTyp if subs isDefinedAt at => subs(at)
     case TType(at: AbsTyp,_,_) if bindedElem map (_._1 === at) getOrElse false =>
       throw CompileError(s"cyclic unification with $at and ${bindedElem.get._2}")
@@ -243,8 +254,11 @@ class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIde
         case _ => x
       }
     //case TRef(IntType,_) => IntType // TODO; doesn't seem to work yet
+      
+    // FIXME: not necessary since we have flatten?:
     case TRef(TType(at: AbsTyp,_,_),_) if (subs isDefinedAt at) && subs(at).t.primitive =>
       subs(at)
+      
     case _ => super.apply(x)
   }) //and println
   override def tspec(x: TypeSpec) = apply(x) // Lazy(apply(x.get))

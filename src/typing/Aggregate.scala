@@ -93,7 +93,7 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
 //        println("FCALL ", x.typ, fc.retType)
 //        fc.args map (_.typ.valType) zip (fc.paramTypes) foreach (ctx.soft_cstrs += _)
         
-        println(s"Call to ${fc.f.nam}")
+//        println(s"Call to ${fc.f.nam}")
         
         implicit val subs = mutable.HashMap[AbsTyp,Type]()
         
@@ -151,7 +151,11 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
 //  }
   override def fctComputed(k: Fun, x: Cyclic[Fun]) = {
 //    new Unify2(this).getUnique(x) oh_and popCtx
-    println(x)
+
+/////
+//    println(x)
+/////
+    
 //    new Unify(this)(x) oh_and popCtx
 //    val r = try new Unify(this)(x) finally popCtx
     val u = try new Unify(this) finally popCtx
@@ -189,7 +193,7 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
   def inst(t: Type)(implicit subs: mutable.Map[AbsTyp, Type]): Type = t match {
     case TType(at: AbsTyp, _, _) if subs isDefinedAt at => subs(at)
     case TType(at: AbsTyp, _, _) if at.quantified =>
-      Type(new Cyclic(AbsTyp()), Seq(), Seq()) and (subs += at -> _) and (x => println(s"inst $at -> $x"))
+      Type(new Cyclic(AbsTyp()), Seq(), Seq()) and (subs += at -> _)  and (x => println(s"inst $at -> $x"))
     case Type(c@Cyclic(ct: ConcTyp), targs, rargs) =>
       Type(c, targs map inst, rargs)
     case _ => t

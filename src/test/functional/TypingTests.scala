@@ -138,11 +138,16 @@ fun foo(x) = if x then foo(x) else x;
 fun main = as[Int](foo(42))
 """)
 
-//// TODO fix: probably broken bc functions are renewed..?
+valid("""
+fun foo(x) = if x then foo(x) else x;
+fun main = foo(0): Int
+""")
+//// TODO fix: probably broken bc functions are renewed..? -- also does it above with foo(())
 //typeError("""
-//fun foo(x) = if x then foo(x) else x;
-//fun main = as[Int](foo(()))
+//fun foo(x) = if x then foo(x) else ();
+//fun main = foo(()): Int
 //""")
+
 }
 
   

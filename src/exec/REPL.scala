@@ -91,7 +91,7 @@ object REPL extends App {
         println("Typed: " + te.typ)
 
         val r = ex(re, ctx.mapValues(_ _2) toMap)
-        println(ex.h.dispVal(r))
+        println(": " + ex.h.dispVal(r))
         ex.h.dealloc(r)
         // TODO put in ctx
       
