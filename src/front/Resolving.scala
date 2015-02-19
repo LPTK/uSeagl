@@ -8,6 +8,7 @@ import Proxy._
 import scala.util.{Try, Success, Failure}
 import common.Reporting
 import collection.mutable.ArrayBuffer
+import common.Reporting.CompileError
 
 
 class Presolve extends StageConverter(Ast, Resolving) {
@@ -73,8 +74,8 @@ class Presolve extends StageConverter(Ast, Resolving) {
   def typs(x: a.TypSym) = {val c = ctx; Lazy(c(x))} // ult(ctx(x))
   def funs(x: a.FunSym) = {val c = ctx; Lazy(c(x))} // ult(ctx(x))
   def vars(x: a.VarSym) =
-//    {val c = ctx; Lazy(c(x))}
-    {ctx(x)}
+    {val c = ctx; Lazy(c(x))}
+//    {ctx(x)}
   def terms(x: a.Term)  = apply(x)
   
   def tspec(x: a.TypeSpec) = x map apply
@@ -127,7 +128,11 @@ class Resolve(ps: Presolve) extends StageConverter(Resolving, Resolved) {
 //    Lazy(apply(x.get))
 //    apply(new Cyclic[a.Fun](_ => x.get))
 //  def vars(x: a.VarSym) = apply(x.get) //apply(x.get) //x.get flatMap apply
-  def vars(x: a.VarSym) = apply(x)
+//  def vars(x: a.VarSym) = apply(x)
+  def vars(x: a.VarSym) =
+    if (state.varTable isDefinedAt x.get.uid) apply(x.get)
+    else throw CompileError(s"Forward reference of local variable ${x.get.nam}")
+  
   def terms(x: a.Term)  = apply(x)
   
   def tspec(x: a.TypeSpec) = x map apply

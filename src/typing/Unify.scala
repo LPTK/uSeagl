@@ -79,6 +79,8 @@ class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIde
   printCstrs
   
   private var bindedElem = None: Opt[(AbsTyp,Type)]
+  
+  /** second param t is just for printing an error */
   def noCycle[T](at: AbsTyp, t: Type)(f: => T) =
     try { bindedElem = Some(at,t); f } finally bindedElem = None
   
@@ -97,7 +99,11 @@ class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIde
         case None if t2.t.value =/= at =>
           subs(at) = t2  // Strong(apply(t2))
 //          for (i <- hc.indices) hc(i) = (apply(hc(i)._1), apply(hc(i)._2))
-          subs.transform{ case(at,qt) => noCycle(at,qt){ apply(qt) } }
+          subs.transform{
+            // trivial cycles (A->A) can have been introduced by previous transformations:
+            case(at,qt) if qt.t.value =/= at => noCycle(at,qt){ apply(qt) }
+            case(at,qt) => qt
+          }
           debug(hc.mkString(", ") + "  " + subs)
         case None =>
         case Some(t) =>
@@ -115,10 +121,19 @@ class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIde
       case (t1, t2 @ TType(_: AbsTyp, _, _)) => hc += (t2 -> t1)
       
       case (tt1 @ TType(t1:ConcTyp, targs1, rargs1), tt2 @ TType(t2:ConcTyp, targs2, rargs2)) =>
-        if (t1 =/= t2) throw UnificationError(t1,t2)
-//        if (t1 =/= t2) throw UnificationError(tt1,tt2)
-        (targs1 zip targs2) map hc.+=
-        (rargs1 zip rargs2) map rc.+=
+//        if (t1 =/= t2) throw UnificationError(t1,t2)
+//        if (t1 =/= t2) (t1,t2) match {
+//          case (RefTyp,t2) =>
+//        }
+        (t1,t2) match {
+          case _ if t1 === t2 =>
+            (targs1 zip targs2) map hc.+=
+            (rargs1 zip rargs2) map rc.+=
+          case (RefTyp,t) if t.primitive =>
+          case (t,RefTyp) if t.primitive =>
+          case _ =>
+            throw UnificationError(t1,t2)
+        }
     }
     
     sc.transform{ case(t1,t2) => (apply(t1),apply(t2)) }

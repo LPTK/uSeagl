@@ -279,7 +279,10 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
 //    case Type(Cyclic(RefTyp), _, Seq(r)) =>
 //      (typ, r)
 //    case TRef(typ, r) => (typ, r)
-    case TType(at:AbsTyp,_,_) => (ctx.mkAbsType, reg) // TODO: reg here?
+    case typ @ TType(at:AbsTyp,_,_) =>
+//      (RefType(ctx.mkAbsType, reg), reg) // TODO: reg here?
+      val r = ctx.mkAbsReg
+      (RefType(ctx.mkAbsType, r), r)
     case _ if typ.t.primitive =>
 //      println(">>",typ)
       (typ, reg) //Reg(VId("??"))) // note: should not be 'r', which is the place the HOR was stored, which we don't care about

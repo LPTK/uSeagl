@@ -44,8 +44,8 @@ class TypingTests extends JUnitSuite {
     case CompileError(_) =>
   }
   
-  def validExpr(txt: Str) = valid(s"fun main = { $txt }")
-  def errorExpr(txt: Str) = typeError(s"fun main = { $txt }")
+  def validExpr(txt: Str) = valid(s"\nfun main = { $txt ; () }\n")
+  def errorExpr(txt: Str) = typeError(s"\nfun main = { $txt ; () }\n")
   
   def process(txt: Str) = {
     
@@ -87,6 +87,12 @@ fun f(x) = x
 """)
   }
   
+  @Test def locals {
+  
+validExpr("a = (); a")
+errorExpr("a; a = ()")
+
+  }
   
   @Test def basicrefs {
 validExpr("""

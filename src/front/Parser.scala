@@ -158,7 +158,7 @@ object Parser extends StandardTokenParsers with regex.RegParser {
   
   def toplevel = decl | stmt
   
-  def repl = cmd | decl | stmt
+  def repl = cmd | ((decl | stmt) <~ (";"?))
   
   
   case class Command(id: Str)
