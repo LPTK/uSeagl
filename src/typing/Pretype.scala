@@ -30,7 +30,7 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
   val IntType = Type(btByName('Int), Seq(), Seq())
   val RefTyp = btByName('Ref)
   def RefType(typ: Type, reg: Reg) = Type(RefTyp, Seq(typ), Seq(reg))
-
+  
   val bfuns = rs.bfuns map (t => apply(t))
   
 //  case class FunInfo(argTyps: Seq[AbsTyp])
@@ -54,6 +54,9 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
       case a.NilExpr => (ctx.mkAbsType, Reg.empty)
       case a.IntLit(n) => (IntType, ctx.mkTmpReg)
       case a.IntOp(a,b,o) => (IntType, ctx.mkTmpReg)
+      case a.Ascribe(e,typ) =>
+        val Ascribe(e,typ) = r
+        (typ, e.reg)
       case a.Var(vs) => //ctx.mkAbsType //ref(apply(vs).typ, vs.nam)
 //        ref(ctx.mkAbsType, vs.nam)
         ref(r.asInstanceOf[Var].sym.typ, vs.nam)
@@ -101,6 +104,12 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
     Typd(r.desugar, t, reg)
   }
   
+//  override def apply(x: a.Binding): Binding = {
+//    val value = terms(x.value)
+//    val loc = Local(x.loc.uid, x.loc.nam, value.typ)
+//    state.varTable += (loc.uid -> loc)
+//    Binding(loc, value)
+//  }
   
   override def apply(x: a.ConcTyp) = x match {
     case a.ConcTyp(uid, nam, typs, regs, params, prim) =>
@@ -270,6 +279,7 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
 //    case Type(Cyclic(RefTyp), _, Seq(r)) =>
 //      (typ, r)
 //    case TRef(typ, r) => (typ, r)
+    case TType(at:AbsTyp,_,_) => (ctx.mkAbsType, reg) // TODO: reg here?
     case _ if typ.t.primitive =>
 //      println(">>",typ)
       (typ, reg) //Reg(VId("??"))) // note: should not be 'r', which is the place the HOR was stored, which we don't care about

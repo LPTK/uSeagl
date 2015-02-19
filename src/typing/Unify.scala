@@ -208,6 +208,11 @@ class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIde
 //    r
 //  }
   
+  override def apply(x: Expr) = (x match {
+    case Ascribe(e,typ) => e.obj
+    case _ => super.apply(x)
+  })
+  
   /** Note: does not handle abs types with typ args */
   override def apply(x: Type) = (x match {
 //    case at: AbsTyp if subs isDefinedAt at => subs(at)

@@ -33,7 +33,7 @@ import Reporting._
  *   
  *   
  */
-class Typing extends JUnitSuite {
+class TypingTests extends JUnitSuite {
   
   
   def valid(txt: Str) = process(txt)
@@ -43,6 +43,9 @@ class Typing extends JUnitSuite {
   catch {
     case CompileError(_) =>
   }
+  
+  def validExpr(txt: Str) = valid(s"fun main = { $txt }")
+  def errorExpr(txt: Str) = typeError(s"fun main = { $txt }")
   
   def process(txt: Str) = {
     
@@ -82,6 +85,29 @@ class Typing extends JUnitSuite {
 """
 fun f(x) = x
 """)
+  }
+  
+  
+  @Test def basicrefs {
+validExpr("""
+a = ();
+a: Ref[Unit]{a};
+b = a;
+b: Ref[Unit]{a}
+""")
+validExpr("""
+a = 42;
+a: Int;
+b = a;
+b: Int
+""")
+  }
+  
+  @Test def refcoerce {
+    
+validExpr("a = (); a: Ref[Unit]")
+errorExpr("a = (); a: Unit")
+
   }
   
   
@@ -195,6 +221,16 @@ fun main = as[Int](())
 {
 valid("""
 """)
+}
+
+  
+  
+  @Test def ascription
+{
+validExpr("42:Int")
+validExpr("new Pair(42,()):Pair[Int,Unit]")
+errorExpr("1:Unit")
+errorExpr("new Pair((),42):Pair[Int,Unit]")
 }
 
 

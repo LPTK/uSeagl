@@ -59,7 +59,8 @@ object Stages {
     
     type TypSym = Lazy[Typ]
     type FunSym = Lazy[Fun]
-    type VarSym = Lazy[Local]
+//    type VarSym = Lazy[Local]
+    type VarSym = Local
     
     type TypeParam = AbsTyp
     

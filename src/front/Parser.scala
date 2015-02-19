@@ -126,7 +126,10 @@ object Parser extends StandardTokenParsers with regex.RegParser {
   }
   
   
-  def expr: Parser[Expr] = freass | faccess | bexpr
+  def expr: Parser[Expr] = (freass | faccess | bexpr) ~ ((":" ~> typez)?) ^^ {
+    case e ~ None => e
+    case e ~ Some(typ) => Ascribe(e, typ)
+  }
   
   
 //  def faccess = expr ~ ("." ~> varname) ^^ {

@@ -37,12 +37,15 @@ self: Stage =>
   
   case class Take(obj: Term, id: VId) extends BasicExpr
   
+  case class Ascribe(t: Term, typ: Type) extends BasicExpr
+  
   
   trait Stmt {
     
     override def toString = this match {
       case Binding(nam, valu) => s"$nam = $valu"
       case Var(s) => s"${vname(s)}"
+      case Ascribe(e,typ) => s"$e: $typ"
       case FCall(f, targs, rargs, args) =>
         fname(f) + mkTyps(targs) + mkRegs(rargs) + mkArgs(args,true) //s"${fname(f)}${mkArgs}"
       case Build(typ, args) =>

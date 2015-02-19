@@ -107,6 +107,7 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
     case a.FCall(fs,ta,ra,a) => FCall(funs(fs), ta map apply, ra map apply, a map terms)
     case a.FieldAccess(e, id) => FieldAccess(terms(e), id)
     case a.FieldAssign(e, id, v) => FieldAssign(terms(e), id, terms(v))
+    case a.Ascribe(e, typ) => Ascribe(terms(e), apply(typ))
   }
 //  def apply(x: a.BasicExpr): BasicExpr = apply(x: a.Expr)
   def apply(x: a.Expr): Expr = x match {

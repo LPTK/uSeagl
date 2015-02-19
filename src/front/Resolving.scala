@@ -73,9 +73,8 @@ class Presolve extends StageConverter(Ast, Resolving) {
   def typs(x: a.TypSym) = {val c = ctx; Lazy(c(x))} // ult(ctx(x))
   def funs(x: a.FunSym) = {val c = ctx; Lazy(c(x))} // ult(ctx(x))
   def vars(x: a.VarSym) =
-//    ult(ctx(x))
-//    Lazy{println(ctx);ctx(x)}
-    {val c = ctx; Lazy(c(x))}
+//    {val c = ctx; Lazy(c(x))}
+    {ctx(x)}
   def terms(x: a.Term)  = apply(x)
   
   def tspec(x: a.TypeSpec) = x map apply
@@ -127,7 +126,8 @@ class Resolve(ps: Presolve) extends StageConverter(Resolving, Resolved) {
   def funs(x: a.FunSym) = apply(x.get) //getUnique(x.get)
 //    Lazy(apply(x.get))
 //    apply(new Cyclic[a.Fun](_ => x.get))
-  def vars(x: a.VarSym) = apply(x.get) //apply(x.get) //x.get flatMap apply
+//  def vars(x: a.VarSym) = apply(x.get) //apply(x.get) //x.get flatMap apply
+  def vars(x: a.VarSym) = apply(x)
   def terms(x: a.Term)  = apply(x)
   
   def tspec(x: a.TypeSpec) = x map apply

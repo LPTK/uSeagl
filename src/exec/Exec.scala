@@ -54,6 +54,8 @@ class Exec {
       case IntLit(n) => (IntVal(n),E)
 //      case BoolLit(b) => BoolVal(b)
       
+      case Ascribe(e, _) => rec(e)
+      
       case IntOp(lhs,rhs,op) =>
         val (v1,t1) = rec(lhs)
         val (v2,t2) = rec(rhs)
