@@ -267,8 +267,12 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
   }
   
   def ref(typ: Type, reg: Reg): (Type, Reg) = typ match {
-    case Type(Cyclic(RefTyp), _, Seq(r)) =>
-      (typ, r)
+//    case Type(Cyclic(RefTyp), _, Seq(r)) =>
+//      (typ, r)
+//    case TRef(typ, r) => (typ, r)
+    case _ if typ.t.primitive =>
+//      println(">>",typ)
+      (typ, reg) //Reg(VId("??"))) // note: should not be 'r', which is the place the HOR was stored, which we don't care about
     case _ => (RefType(typ, reg), reg)
   }  
   def ref(typ: Type, nam: VId): (Type, Reg) = ref(typ, Reg(nam))

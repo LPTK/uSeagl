@@ -209,11 +209,11 @@ class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIde
 //  }
   
   /** Note: does not handle abs types with typ args */
-  override def apply(x: Type) = (x.t.value match {
+  override def apply(x: Type) = (x match {
 //    case at: AbsTyp if subs isDefinedAt at => subs(at)
-    case at: AbsTyp if bindedElem map (_._1 === at) getOrElse false =>
+    case TType(at: AbsTyp,_,_) if bindedElem map (_._1 === at) getOrElse false =>
       throw CompileError(s"cyclic unification with $at and ${bindedElem.get._2}")
-    case at: AbsTyp =>
+    case TType(at: AbsTyp,_,_) =>
       subs.get(at) match {
         case Some(t) =>
 //          println(s"rep $at -> $t")
@@ -221,6 +221,8 @@ class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIde
         case _ => x
       }
     //case TRef(IntType,_) => IntType // TODO; doesn't seem to work yet
+    case TRef(TType(at: AbsTyp,_,_),_) if (subs isDefinedAt at) && subs(at).t.primitive =>
+      subs(at)
     case _ => super.apply(x)
   }) //and println
   override def tspec(x: TypeSpec) = apply(x) // Lazy(apply(x.get))

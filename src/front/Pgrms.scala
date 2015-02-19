@@ -58,6 +58,8 @@ self: Stage =>
     val typs: Seq[TypeParam] // Seq[TId]
     val regs: Seq[VId]
     
+    def primitive: Bool
+    
     def namStr = if (dispIds) s"$uid$nam" else nam.toString
     
     override def toString =
@@ -83,6 +85,7 @@ self: Stage =>
 
   case class AbsTyp(uid: TUid, nam: TId, typs: Seq[TypeParam], regs: Seq[VId], var quantified: Bool, userDefined: Bool) extends Typ {
     def params = Seq()
+    def primitive = false
   }
   object AbsTyp {
 //    def apply(): AbsTyp = { val id = new TUid; AbsTyp(id, TId(id toString), Seq(), Seq(), false) }
