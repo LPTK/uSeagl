@@ -129,6 +129,7 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
   final def apply(x: a.Typ): Cyclic[Typ] =
 //    typTable getOrElse (x.uid, getUnique(x)) value
     if ((typTable isDefinedAt x.uid) && isRenewed(x)) typTable(x.uid)
+//    if ((typTable isDefinedAt x.uid)) typTable(x.uid) // not renewing types
     else { renewed map (_ += x); getUnique(x) }
   
   def delegate(x: a.Typ): Typ = x match {

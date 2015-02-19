@@ -193,7 +193,7 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
   def inst(t: Type)(implicit subs: mutable.Map[AbsTyp, Type]): Type = t match {
     case TType(at: AbsTyp, _, _) if subs isDefinedAt at => subs(at)
     case TType(at: AbsTyp, _, _) if at.quantified =>
-      Type(new Cyclic(AbsTyp()), Seq(), Seq()) and (subs += at -> _)  and (x => println(s"inst $at -> $x"))
+      Type(new Cyclic(AbsTyp()), Seq(), Seq()) and (subs += at -> _)  //and (x => println(s"inst $at -> $x"))
     case Type(c@Cyclic(ct: ConcTyp), targs, rargs) =>
       Type(c, targs map inst, rargs)
     case _ => t
@@ -233,17 +233,22 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
   
   
   def typeUnify(e: pt.a.Expr) = {
-    val es = Seq()
-    val Cyclic(Fun(uid, nam, typs, regs, params, ret, spec, body)) =
-      renew(pt.apply(pt.a.Fun(new FUid, IntlFId, es, es, es, None, Specs.Spec.empty, e)))
-    body
+//    val es = Seq()
+//    val Cyclic(Fun(uid, nam, typs, regs, params, ret, spec, body)) =
+//      renew(pt.apply(pt.a.Fun(new FUid, IntlFId, es, es, es, None, Specs.Spec.empty, e)))
+//    body
+    val e2 = terms(pt.terms(e))
+    new Unify(this).terms(e2)
   }
   def typeUnify(b: pt.a.Binding) = {
-    val es = Seq()
-    val Cyclic(Fun(uid, nam, typs, regs, params, ret, spec, body)) =
-      renew(pt.apply(pt.a.Fun(new FUid, IntlFId, es, es, es, b.loc.typ, Specs.Spec.empty, b.value)))
-    state.varTable += (b.loc.uid -> Local(b.loc.uid, b.loc.nam, ret)) // we need to leak the typed result; (pretty ugly) 
-    body
+//    val es = Seq()
+//    val Cyclic(Fun(uid, nam, typs, regs, params, ret, spec, body)) =
+//      renew(pt.apply(pt.a.Fun(new FUid, IntlFId, es, es, es, b.loc.typ, Specs.Spec.empty, b.value)))
+//    state.varTable += (b.loc.uid -> Local(b.loc.uid, b.loc.nam, ret)) // we need to leak the typed result; (pretty ugly) 
+//    body
+    val e2 = terms(pt.terms(b.value))
+    state.varTable += (b.loc.uid -> Local(b.loc.uid, b.loc.nam, e2.typ))
+    new Unify(this).terms(e2)
   }
   
   

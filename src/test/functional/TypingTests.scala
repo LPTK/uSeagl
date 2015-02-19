@@ -120,8 +120,8 @@ errorExpr("a = (); a: Unit")
   @Test def lists {
     valid(
 """
-typ List[T](head: T, tail: List[T]);
-fun get(ls:List,n):Ref{ls.head} = ls.head;
+typ List[T](head: T, tail: List[T])
+fun get(ls:List,n):Ref{ls.head} = ls.head
 fun gett(ls:List,n):Ref{ls.tail.tail.head} = ls.tail.tail.head
 """)
   }
@@ -174,6 +174,11 @@ fun main = foo(())
   
   @Test def polymorphism
 {;
+
+validExpr("id(42):Int")
+validExpr("id(()):Ref[Unit]")
+errorExpr("id(42):Unit")
+errorExpr("as(42):Unit")
 
 validExpr("as[Int](id(42)); as[Ref[Unit]](id(()))")
 errorExpr("as[Ref[Unit]](id(42))")

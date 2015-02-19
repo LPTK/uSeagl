@@ -54,21 +54,29 @@ self: Stage =>
 //  sealed trait Typ extends Unique with Parmzd {
   sealed trait Typ extends Parmzd {
     val uid: TUid
-    val nam: TId
+    def nam: TId
     val typs: Seq[TypeParam] // Seq[TId]
     val regs: Seq[VId]
     
     def primitive: Bool
     
-    def namStr = if (dispIds) s"$uid$nam" else nam.toString
+    def namStr = {
+      val str = this match {
+        case at: AbsTyp =>
+          if (at.userDefined) at.nam.toString
+          else {if (at.quantified) "'" else "?"} + at.nam
+        case _ => nam.toString
+      }
+      if (dispIds) s"$uid$str" else str
+    }
     
     override def toString =
-    (if (dispIds) s"$uid" else "") +
+//    (if (dispIds) s"$uid" else "") +
     (this match {
       case ConcTyp(uid, nam, typs, regs, params, _) =>
-        "typ " + nam + mkTyps(typs map tpname) + mkRegs(regs) + mkArgs(params)
-      case AbsTyp(uid, nam, typs, regs, qu, ud) =>
-        "" + nam + mkTyps(typs) + mkRegs(regs) + "=?"
+        "typ " + namStr + mkTyps(typs map tpname) + mkRegs(regs) + mkArgs(params)
+      case at @ AbsTyp(uid, _nam, typs, regs, qu, ud) =>
+        "" + namStr + mkTyps(typs) + mkRegs(regs) + "=?"
     })
   }
   
@@ -82,14 +90,15 @@ self: Stage =>
       case _ => false
     }
   }
-
+  
   case class AbsTyp(uid: TUid, nam: TId, typs: Seq[TypeParam], regs: Seq[VId], var quantified: Bool, userDefined: Bool) extends Typ {
     def params = Seq()
     def primitive = false
+//    def nam = if (userDefined) _nam else TId({if (quantified) "'" else "?"} + _nam) //oh_and(println(_nam))
   }
   object AbsTyp {
 //    def apply(): AbsTyp = { val id = new TUid; AbsTyp(id, TId(id toString), Seq(), Seq(), false) }
-    def apply(): AbsTyp = new TUid in { id => AbsTyp(id, TId(id toString), Seq(), Seq(), false, false) }
+    def apply(): AbsTyp = new TUid in { id => AbsTyp(id, TId(id.id toString), Seq(), Seq(), false, false) }
   }
   
   
@@ -110,6 +119,13 @@ self: Stage =>
   ) extends Decl with Parmzd {
     
     def mkNew = Fun(new FUid, nam, typs, regs, params, ret, spec, body)
+    
+//    override def equals(that: Any) = that match { // FIXME: is this sound to do?
+//      case f: Fun => f.uid === uid
+//      case _ => false
+//    }
+////    override def equals(that: Any) =
+////      equalsBy(this, ((_:Fun).uid), that) // FIXME: is this sound to do?
     
     override def toString = "fun " + nam + mkTyps(typs map tpname) +
       mkRegs(regs) + mkArgs(params,true) + s": $ret = $body"

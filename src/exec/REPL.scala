@@ -25,7 +25,8 @@ object REPL extends App {
   
   
 //  val ctx = collection.mutable.HashMap[VId,Value]()
-  val ctx = collection.mutable.HashMap[VId,(Typed.Type,Value)]()
+//  val ctx = collection.mutable.HashMap[VId,(Typed.Type,Value)]()
+  val ctx = collection.mutable.HashMap[VUid,Value]()
   
   def rep {
     
@@ -53,7 +54,10 @@ object REPL extends App {
         case "h" =>
           println(ex.h)
         case "c" =>
-          println("Locals:\n  " + ctx.mapValues{case(t,v) => s"$v : $t"}.mkString("\n  "))
+          println("Locals:\n  " + ctx.map{case (uid,v) =>
+            val loc = ag.state.varTable(uid)
+            s"${loc.nam} : ${loc.typ} = $v"
+          }.mkString("\n  "))
           println("Types:\n  " + ag.state.typTable.values.collect{case Cyclic(ct: Typed.ConcTyp) => ct}.mkString("\n  "))
           println("Funs:\n  " + ag.state.funTable.values.filter{_.nam =/= ag.IntlFId}.mkString("\n  "))
         case _ => println(s"Unknown command :$c")
@@ -89,9 +93,9 @@ object REPL extends App {
 //        val te = ty.typeUnify(re)
         val te = ag.typeUnify(re)
         println("Typed: " + te.typ)
-
-        val r = ex(re, ctx.mapValues(_ _2) toMap)
-        println(": " + ex.h.dispVal(r))
+        
+        val r = ex(re, ctx)
+        println("= " + ex.h.dispVal(r))
         ex.h.dealloc(r)
         // TODO put in ctx
       
@@ -101,18 +105,20 @@ object REPL extends App {
 //        val a = rs(ps(value))
         try {
           val rb @ Resolved.Binding(loc, v) = rs(ps(b))
-          val id = loc.nam
+          val uid = loc.uid
           
   //        val tv = ty.typeUnify(rb)
           val tv = ag.typeUnify(rb)
           println("Typed: " + tv.typ)
           
-          val xv = ex(v, ctx.mapValues(_ _2) toMap)
-          if (ctx isDefinedAt id)
-            ex.h.dealloc(ctx(id)._2)
-          ctx(id) = tv.typ -> xv
+          val xv = ex(v, ctx)
+//          val xv = ex(v, ctx.toMap map {case (k,v) => ag.state.varTable(k).nam -> v})
+          if (ctx isDefinedAt uid)
+            ex.h.dealloc(ctx(uid))
+//          ctx(uid) = tv.typ -> xv
+            ctx(uid) = xv
   //        println(v)
-          println(s"$id: ${ex.h.dispVal(ctx(id)._2)}")
+          println(s"${loc.nam} = ${ex.h.dispVal(ctx(uid))}")
 //          println(ag.state.varTable)
         }
         catch {

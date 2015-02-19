@@ -24,7 +24,8 @@ class Exec {
 //  import collection.mutable._
   import collection.Set
   
-  type Gamma = Map[VId,Value]
+//  type Gamma = Map[VId,Value]
+  type Gamma = collection.Map[VUid,Value]
   
   val h: Heap = new Heap
   import h.dispVal
@@ -73,7 +74,7 @@ class Exec {
           case _ => throw new IfCondEE(cp)
         }
       
-      case Var(s) => (ref(g(s.nam)), E) // TODO handle not in ctx
+      case Var(s) => (ref(g(s.uid)), E) // TODO handle not in ctx
 //      case Build(typ, args) => h.alloc(Obj(
 //          typ.t.params.z map {p => }
 //        ))
@@ -102,7 +103,7 @@ class Exec {
         val par = f.params
         val tmps = ArrayBuffer[Ptr]()
         val g2 = for (i <- 0 until par.size; (valu,tmp) = rec(args(i)))
-          yield par(i).nam -> valu oh_and (tmps ++= tmp)
+          yield par(i).uid -> valu oh_and (tmps ++= tmp)
         rec(f.body)(g2 toMap) + tmps + g2.collect{case(id,ptr:Ptr) => ptr}
       
       case FieldAccess(obj, id) =>
@@ -141,9 +142,9 @@ class Exec {
         
       /** At block exit, every (local) temporary is deallocated, as well as intermediate exprs */
       case Block(stmts, e) => stmts match {
-        case Seq(Right(Binding(Local(_,id,_),e2)), rest @ _*) =>
+        case Seq(Right(Binding(Local(uid,id,_),e2)), rest @ _*) =>
           val (p,t) = rec(e2)
-          val (p2,t2) = rec(Block(rest, e))(g + (id -> p)) + t
+          val (p2,t2) = rec(Block(rest, e))(g + (uid -> p)) + t
 //          h.dealloc(p)
 //          t2 foreach h.dealloc
           h.dealloc(t2 :+ p)

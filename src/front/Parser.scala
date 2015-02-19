@@ -79,7 +79,8 @@ object Parser extends StandardTokenParsers with regex.RegParser {
   
   def decl: Parser[Decl] = typ | fun
   
-  def pgrm: Parser[Pgrm] = repsep(decl, ";") ^^ {
+//  def pgrm: Parser[Pgrm] = repsep(decl, ";") ^^ {
+  def pgrm: Parser[Pgrm] = rep(decl <~ (";"?)) ^^ {
     case dls => Pgrm(
         dls collect {case typ: ConcTyp => typ.nam -> typ} toMap,
         dls collect {case fun: Fun => fun.nam -> fun} toMap

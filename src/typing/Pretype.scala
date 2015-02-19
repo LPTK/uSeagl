@@ -118,6 +118,7 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
       pushCtx
       val ps = params map apply
       val newAbsTyps = ctx.absTyps
+      newAbsTyps foreach (_.quantified = true)
       val newAbsRegs = ctx.absRegs
       popCtx
       ConcTyp(uid, nam, (typs map tparam) ++ newAbsTyps, regs ++ newAbsRegs, ps, prim)
@@ -179,7 +180,7 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
     var absTypId = 0
     def nextId = {
       val letter = (absTypId % 26 + 'A').toChar
-      TId(s"'$letter" + (if (absTypId > 26) (absTypId/26) else ""))
+      TId(s"$letter" + (if (absTypId > 26) (absTypId/26) else ""))
     } oh_and (absTypId += 1)
     
 //    var tmpVarId = 0
