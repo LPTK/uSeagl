@@ -64,7 +64,7 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
       case a.Ite(c,t,e) => (ctx.mkAbsType, ctx.mkTmpReg)
       case b: a.Build =>
         b.typ.t.value match {
-          case a.ConcTyp(_, _, _, _, fs) if b.args.size != fs.size =>
+          case a.ConcTyp(_, _, _, _, fs, _) if b.args.size != fs.size =>
             throw CompileError(s"Wrong number of arguments in object construction $b")
           case at: a.AbsTyp => 
             throw CompileError(s"Cannot construct abstract type $at")
@@ -103,13 +103,13 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
   
   
   override def apply(x: a.ConcTyp) = x match {
-    case a.ConcTyp(uid, nam, typs, regs, params) =>
+    case a.ConcTyp(uid, nam, typs, regs, params, prim) =>
       pushCtx
       val ps = params map apply
       val newAbsTyps = ctx.absTyps
       val newAbsRegs = ctx.absRegs
       popCtx
-      ConcTyp(uid, nam, (typs map tparam) ++ newAbsTyps, regs ++ newAbsRegs, ps)
+      ConcTyp(uid, nam, (typs map tparam) ++ newAbsTyps, regs ++ newAbsRegs, ps, prim)
   }
   
   override def apply(x: a.Type) = {

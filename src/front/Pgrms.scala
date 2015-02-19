@@ -63,14 +63,14 @@ self: Stage =>
     override def toString =
     (if (dispIds) s"$uid" else "") +
     (this match {
-      case ConcTyp(uid, nam, typs, regs, params) =>
+      case ConcTyp(uid, nam, typs, regs, params, _) =>
         "typ " + nam + mkTyps(typs map tpname) + mkRegs(regs) + mkArgs(params)
       case AbsTyp(uid, nam, typs, regs, qu, ud) =>
         "" + nam + mkTyps(typs) + mkRegs(regs) + "=?"
     })
   }
   
-  case class ConcTyp(uid: TUid, nam: TId, typs: Seq[TypeParam], regs: Seq[VId], params: Seq[Local]) extends Decl with Typ {
+  case class ConcTyp(uid: TUid, nam: TId, typs: Seq[TypeParam], regs: Seq[VId], params: Seq[Local], primitive: Bool) extends Decl with Typ {
     def getField(id: VId) = params.find (_.nam === id)
     
     /** TODO: check if always okay to do this: this is assuming a ConcTyp in the same stage with the same id should be the same

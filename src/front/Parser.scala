@@ -18,7 +18,8 @@ object Parser extends StandardTokenParsers with regex.RegParser {
     case nam ~ typs ~ regs ~ params => ConcTyp(new TUid, TId(nam),
         typs getOrElse (Seq()),
         regs getOrElse (Seq()),
-        params getOrElse (Seq())
+        params getOrElse (Seq()),
+        false
     )
   }
   

@@ -12,9 +12,9 @@ object Builtins {
   def typtxt(txt: Str): ConcTyp = phrase(typ)(new lexical.Scanner(txt)).get
   
   val btyps = Seq(
-      ConcTyp(new TUid, TId("Ref"), Seq(TId("T")), Seq(VId("Pte")), Seq()),
-      ConcTyp(new TUid, TId("Unit"), Seq(), Seq(), Seq()),
-      ConcTyp(new TUid, TId("Int"), Seq(), Seq(), Seq()),
+      ConcTyp(new TUid, TId("Ref"), Seq(TId("T")), Seq(VId("Pte")), Seq(), true),
+      ConcTyp(new TUid, TId("Unit"), Seq(), Seq(), Seq(), false),
+      ConcTyp(new TUid, TId("Int"), Seq(), Seq(), Seq(), true),
       typtxt("typ Pair(fst,snd)"),
       typtxt("typ Couple[T](fst:T,snd:T)"),
       typtxt("typ Cell(val)"),
@@ -35,8 +35,8 @@ object Builtins {
   val bfuns = Seq(
       binIntOp("add"){_ + _},
       binIntOp("eq"){(a,b) => if (a == b) 1 else 0},
-//      funtxt("fun id(x) = x"),
-      funtxt("fun id[T](x:T) = x"),
+      funtxt("fun id(x) = x"),
+      funtxt("fun as[T](x:T) = x"),
       funtxt("fun refto{r}(x: Ref{r}) = x  // useful to require a particular region for a ref"),
       funtxt("fun coe[T](x:T,y:T) = ()  // coercition of two values' types")
   )
