@@ -68,7 +68,8 @@ class Aggregate(val pt: Pretype) extends Types.singleStaged.Identity with StageI
         ctx.soft_cstrs += (b.typ -> IntType)
         IntType
       case Var(vs) =>
-        ctx.soft_cstrs += (x.typ -> vs.typ)
+        if (x.typ =/= vs.typ)
+          ctx.soft_cstrs += (x.typ -> vs.typ)
       case Ascribe(e,typ) =>
         ctx.hard_cstrs += (e.typ -> typ)
 //        ctx.soft_cstrs += (e.typ -> typ)

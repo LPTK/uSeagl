@@ -104,12 +104,14 @@ class Pretype(rs: Resolve) extends StageConverter(Resolved, Typed) {
     Typd(r.desugar, t, reg)
   }
   
-//  override def apply(x: a.Binding): Binding = {
-//    val value = terms(x.value)
-//    val loc = Local(x.loc.uid, x.loc.nam, value.typ)
-//    state.varTable += (loc.uid -> loc)
-//    Binding(loc, value)
-//  }
+  /** this override reduces the number of abs types to unify by inlining the type of the value in an untyped binding */
+  override def apply(x: a.Binding): Binding =
+  if (x.loc.typ.isDefined) super.apply(x) else {
+    val value = terms(x.value)
+    val loc = Local(x.loc.uid, x.loc.nam, value.typ)
+    state.varTable += (loc.uid -> loc)
+    Binding(loc, value)
+  }
   
   override def apply(x: a.ConcTyp) = x match {
     case a.ConcTyp(uid, nam, typs, regs, params, prim) =>
