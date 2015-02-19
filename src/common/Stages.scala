@@ -80,7 +80,7 @@ object Stages {
     type TypeParam = AbsTyp
     
     
-    def fname(s: FunSym) = s.value.nam.toString
+    def fname(s: FunSym) = if (s.wasComputerYet) s.value.nam.toString else "??"
     def tname(s: TypSym) = s.value.namStr
     def vname(s: VarSym) = s.nam.toString
     def tpname(s: TypeParam): Str = s.nam

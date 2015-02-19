@@ -130,7 +130,9 @@ class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIde
             (targs1 zip targs2) map hc.+=
             (rargs1 zip rargs2) map rc.+=
           case (RefTyp,t) if t.primitive =>
+            hc += (targs1.head -> tt2)
           case (t,RefTyp) if t.primitive =>
+            hc += (tt1 -> targs2.head)
           case _ =>
             throw UnificationError(t1,t2)
         }
@@ -249,7 +251,9 @@ class Unify(val ag: Aggregate) extends Types.singleStaged.Identity with StageIde
   override def tparam(x: TypeParam) = apply(x)
   
   override def typs(x: TypSym) = apply(x) //getUnique(x)
-  override def funs(x: FunSym) = apply(x) //getUnique(x)
+  override def funs(x: FunSym) =
+    if (x.wasComputerYet) apply(x) // FIXME: correct behavior? => no, it's unsound when it happens (in mutrec funs)
+    else x
   override def vars(x: a.VarSym) = apply(x)
   override def terms(x: Term) = Typd(apply(x.obj), apply(x.typ), apply(x.reg))
   

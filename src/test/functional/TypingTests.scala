@@ -166,6 +166,32 @@ fun main = foo(())
 }
 
   
+  
+  @Test def polymorphism
+{;
+
+validExpr("as[Int](id(42)); as[Ref[Unit]](id(()))")
+errorExpr("as[Ref[Unit]](id(42))")
+
+
+validExpr("x=nil; as[Int](x)")
+
+validExpr("x=nil; x: Int")       // using the fact Int is primitive
+errorExpr("x=nil; x: Unit")      // Unit is not primitive
+validExpr("x=nil; x: Ref[Int]")  // types to Ref[Int]{'a}  maybe we should forbid construction of refs to primitives?
+validExpr("x=nil; x: Ref[Unit]")
+
+errorExpr("x=nil; x: Ref[Unit]; x: Ref[Int]")
+errorExpr("x=nil; x: Int; x: Ref[Unit]")
+
+validExpr("p = new Pair(nil,nil); as[Int](p.fst)")
+errorExpr("p = new Pair(nil,nil); as[Int](p.fst); as[Ref[Unit]](p.fst)")
+
+
+}
+  
+  
+  
   @Test def polymrec
 {;
 
@@ -218,6 +244,10 @@ fun main(x:Int) = {
 typeError("""
 fun main = as[Int](())
 """)
+
+
+validExpr("a=(); b=0; b:Ref[Int]; a:Ref[Unit]")
+errorExpr("a=(); b=0; a:Ref[Int]")
 
 
 }
